@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:5001/api"; // Backend server manzili
+const API_URL = "https://backed1.onrender.com/api"; // Backend server manzili
 
 export const getAdmins = async () => {
   const response = await axios.get(`${API_URL}/admins`);
