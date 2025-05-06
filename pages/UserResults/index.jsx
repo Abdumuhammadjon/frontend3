@@ -32,7 +32,6 @@ const UserResults = () => {
       try {
         setLoading(true);
         setError(null);
-
         const url = subjectId
           ? `https://backed1.onrender.com/api/userResults/${userId}?subjectId=${subjectId}`
           : `https://backed1.onrender.com/api/userResults/${userId}`;
@@ -59,16 +58,18 @@ const UserResults = () => {
     router.push("/questions");
   };
 
-
   const handleDelete = async (resultId) => {
     const token = localStorage.getItem("token");
 
     try {
-      await axios.delete(`https://backed1.onrender.com/api/userResult/${resultId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      await axios.delete(
+        `https://backed1.onrender.com/api/userResult/${resultId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       setResults((prev) => prev.filter((r) => r.resultId !== resultId));
     } catch (err) {
@@ -77,81 +78,61 @@ const UserResults = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
+    <div className="min-h-screen bg-gray-100 p-4 sm:p-6">
       <Head>
         <title>Foydalanuvchi Natijalari</title>
         <meta name="description" content="Foydalanuvchi test natijalari" />
       </Head>
 
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
           <h2 className="text-2xl font-semibold text-gray-800 flex items-center gap-2">
             <BarChart size={24} />
             Foydalanuvchi Natijalari
           </h2>
           <button
             onClick={handleBack}
-            className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-700"
+            className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition duration-200"
           >
             Orqaga
           </button>
         </div>
 
         {loading && <p className="text-gray-600">Natijalar yuklanmoqda...</p>}
+
         {error && (
           <p className="text-red-500 bg-red-100 p-3 rounded-lg">{error}</p>
         )}
+
         {!loading && !error && results.length === 0 && (
           <p className="text-gray-600">Hech qanday natija topilmadi.</p>
         )}
 
         {!loading && !error && results.length > 0 && (
-          <div className="bg-white shadow-md rounded-lg overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
+          <div className="bg-white shadow-md rounded-lg overflow-x-auto">
+            <table className="min-w-full w-full divide-y divide-gray-200 text-sm text-center">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Foydalanuvchi
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    To‘g‘ri javoblar
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Umumiy savollar
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Foiz
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Sana
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Amallar
-                  </th>
+                  <th className="px-4 py-2 text-gray-500 uppercase">Foydalanuvchi</th>
+                  <th className="px-4 py-2 text-gray-500 uppercase">To‘g‘ri javoblar</th>
+                  <th className="px-4 py-2 text-gray-500 uppercase">Umumiy savollar</th>
+                  <th className="px-4 py-2 text-gray-500 uppercase">Foiz</th>
+                  <th className="px-4 py-2 text-gray-500 uppercase">Sana</th>
+                  <th className="px-4 py-2 text-gray-500 uppercase">Amallar</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {results.map((result) => (
-                  <tr key={result.resultId}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {result.username}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {result.correctAnswers}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {result.totalQuestions}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {result.scorePercentage}%
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {result.date}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                  <tr key={result.resultId} className="hover:bg-gray-50">
+                    <td className="px-4 py-3">{result.username}</td>
+                    <td className="px-4 py-3">{result.correctAnswers}</td>
+                    <td className="px-4 py-3">{result.totalQuestions}</td>
+                    <td className="px-4 py-3">{result.scorePercentage}%</td>
+                    <td className="px-4 py-3">{result.date}</td>
+                    <td className="px-4 py-3">
                       <button
                         onClick={() => handleDelete(result.resultId)}
-                        className="text-red-600 hover:text-red-800"
+                        className="text-red-600 hover:text-red-800 transition duration-150"
                       >
                         O‘chirish
                       </button>
