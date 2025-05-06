@@ -1,9 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
   images: {
-    unoptimized: true, // 👈 Bu muammoni hal qiladi
-  },
+    unoptimized: true // ixtiyoriy, agar image optimization ishlatilmasa
+  }
 };
 
 module.exports = nextConfig;
