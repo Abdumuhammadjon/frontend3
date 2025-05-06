@@ -1,8 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'export',
   images: {
-    unoptimized: true // ixtiyoriy, agar image optimization ishlatilmasa
-  }
+    unoptimized: true, // kerak bo‘lsa
+  },
 };
 
 module.exports = nextConfig;
+
