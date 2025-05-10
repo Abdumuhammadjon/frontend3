@@ -8,6 +8,7 @@ import { jwtDecode } from "jwt-decode"; // ✅ Tokenni decode qilish uchun
 const Login = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(false); // ⏳ Loader holati
   const router = useRouter();
 
   useEffect(() => {
@@ -35,6 +36,7 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
+    setIsLoading(true); // ⏳ Loader yoqiladi
 
     try {
       const res = await axios.post(
@@ -45,11 +47,11 @@ const Login = () => {
           withCredentials: true, // 🍪 Cookie’ni qabul qilish
         }
       );
-localStorage.setItem("subjectId", res.data.subjectId)
-localStorage.setItem("adminId", res.data.adminId)
-localStorage.setItem("token", res.data.token)
-localStorage.setItem("userId", res.data.adminId)
-localStorage.setItem("role", res.data.role)
+      localStorage.setItem("subjectId", res.data.subjectId);
+      localStorage.setItem("adminId", res.data.adminId);
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("userId", res.data.adminId);
+      localStorage.setItem("role", res.data.role);
       const token = res.data.token;
       if (!token) throw new Error("Token kelmadi!");
 
@@ -59,11 +61,9 @@ localStorage.setItem("role", res.data.role)
       console.log("🟢 Token:", decoded, 'salom');
       console.log("🟢 Tokeni:", decoded.role, 'salom');
 
-      if(decoded.role === "superadmin"){
-        router.push("/adminlar")
-      }
-
-      else  if (decoded.role === "admin") {
+      if (decoded.role === "superadmin") {
+        router.push("/adminlar");
+      } else if (decoded.role === "admin") {
         router.push("/questions");
       } else {
         router.push("/quiz");
@@ -73,6 +73,8 @@ localStorage.setItem("role", res.data.role)
     } catch (err) {
       console.error("❌ Login error:", err.response?.data?.message || err.message);
       setError(err.response?.data?.message || "Login failed");
+    } finally {
+      setIsLoading(false); // ⏳ Loader o‘chiriladi
     }
   };
 
@@ -81,7 +83,12 @@ localStorage.setItem("role", res.data.role)
       <div className="bg-white p-8 rounded-lg shadow-md w-96">
         <h2 className="text-2xl font-bold text-center mb-6">Login</h2>
         {error && <p className="text-red-500 text-center">{error}</p>}
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="relative">
+          {isLoading && (
+            <div className="absolute inset-0 flex justify-center items-center bg-white bg-opacity-75">
+              <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          )}
           <div className="mb-4">
             <label className="block text-gray-700">Email</label>
             <input
@@ -92,6 +99,7 @@ localStorage.setItem("role", res.data.role)
               required
               className="w-full p-2 border rounded mt-1"
               placeholder="Enter your email"
+              disabled={isLoading} // ⏳ Loader vaqtida input’lar o‘chiriladi
             />
           </div>
           <div className="mb-4">
@@ -104,13 +112,15 @@ localStorage.setItem("role", res.data.role)
               required
               className="w-full p-2 border rounded mt-1"
               placeholder="Enter your password"
+              disabled={isLoading} // ⏳ Loader vaqtida input’lar o‘chiriladi
             />
           </div>
           <button
             type="submit"
-            className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600"
+            className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 disabled:bg-blue-300"
+            disabled={isLoading} // ⏳ Loader vaqtida tugma o‘chiriladi
           >
-            Login
+            {isLoading ? "Loading..." : "Login"}
           </button>
         </form>
         <p className="text-center mt-4 text-gray-600">
