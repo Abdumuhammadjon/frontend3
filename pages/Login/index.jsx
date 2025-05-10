@@ -69,7 +69,7 @@ const Login = () => {
         router.push("/quiz");
       }
 
-      console.log("✅ Login successful:", res.data.subjectId);
+     
     } catch (err) {
       console.error("❌ Login error:", err.response?.data?.message || err.message);
       setError(err.response?.data?.message || "Login failed");
