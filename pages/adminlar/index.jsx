@@ -78,9 +78,10 @@ export default function Dashboard() {
 
   return (
     <div className="flex -ml-5 flex-col h-screen bg-gray-100">
-      <div className="bg-white shadow-md h-16 flex items-center px-6  fixed w-full z-10 top-0">
-        <h1 className="text-2xl pb-4 -mr-2 font-bold text-gray-800">Dashboard</h1>
-      </div>
+  <div className="bg-white shadow-md h-20 sm:h-24 flex items-center px-4 sm:px-6 fixed w-full z-10 top-0">
+  <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Dashboard</h1>
+</div>
+
 
       <div className="flex flex-1 pt-16">
         <div className={`bg-gray-900 text-white fixed h-full p-5 top-16 transition-all duration-300 ${isOpen ? "w-64" : "w-20"} flex flex-col`}>
