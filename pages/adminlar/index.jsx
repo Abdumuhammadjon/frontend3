@@ -78,7 +78,7 @@ export default function Dashboard() {
 
   return (
     <div className="flex -ml-5 flex-col h-screen bg-gray-100">
-      <div className="bg-white shadow-md h-16 flex items-center px-6 fixed w-full z-10 top-0">
+      <div className="bg-white shadow-md h-16 flex items-center px-6 -mr-5 fixed w-full z-10 top-0">
         <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
       </div>
 
