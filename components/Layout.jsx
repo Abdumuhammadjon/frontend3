@@ -12,7 +12,7 @@ const Layout = ({ children }) => {
 };
 
 const styles = {
-  main: { padding: "0px", minHeight: "100vh" }
+  main: { padding: "20px", minHeight: "100vh" }
 };
 
 export default Layout;
