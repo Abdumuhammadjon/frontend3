@@ -133,28 +133,32 @@ export default function Home() {
     }
 
     try {
-      const res = await axios.post("https://backed1.onrender.com/api/save-answers", {
+      setLoading(true);
+      await axios.post("https://backed1.onrender.com/api/save-answers", {
         answers,
         userId,
         subjectId: selectedSubject,
       });
 
       alert("Javoblar muvaffaqiyatli saqlandi!");
-
-      // ✅ Sahifani natijalar sahifasiga o'tkazish
       router.push({
         pathname: "/Natija",
         query: { subjectId: selectedSubject },
       });
     } catch (error) {
       alert("Javoblarni saqlashda xatolik yuz berdi");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center p-6">
       <h1 className="text-3xl font-bold text-blue-700 mb-6">Fanlar ro‘yxati</h1>
+
+      {loading && <p className="text-blue-500 mb-4 text-lg">Iltimos, kuting...</p>}
       {error && <p className="text-red-500 mb-4">Xatolik: {error}</p>}
+
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 w-full max-w-4xl">
         {subjects.map((subject) => (
           <button
@@ -202,8 +206,9 @@ export default function Home() {
           <button
             onClick={handleSaveAnswers}
             className="mt-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-md hover:bg-green-600 transition"
+            disabled={loading}
           >
-            Javoblarni Saqlash
+            {loading ? "Saqlanmoqda..." : "Javoblarni Saqlash"}
           </button>
         </div>
       )}
