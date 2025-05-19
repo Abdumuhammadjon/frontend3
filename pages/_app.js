@@ -13,6 +13,43 @@ export default function App({ Component, pageProps }) {
   const [lastPath, setLastPath] = useState(null);
   const router = useRouter();
 
+  // Foydalanuvchi faolligini kuzatish va 3 soatlik faolsizlikni tekshirish
+  useEffect(() => {
+    const INACTIVITY_TIMEOUT = 3 * 60 * 60 * 1000; // 3 soat (millisekundlarda)
+    let lastActivity = Date.now();
+    let inactivityTimer;
+
+    // Faollik hodisalarini yangilash
+    const updateActivity = () => {
+      lastActivity = Date.now();
+    };
+
+    // Faolsizlikni tekshirish
+    const checkInactivity = () => {
+      if (Date.now() - lastActivity >= INACTIVITY_TIMEOUT) {
+        // localStorage va Cookies ni tozalash
+        localStorage.removeItem("token");
+        localStorage.removeItem("userId"); // Agar boshqa kalitlar bo‘lsa, qo‘shing
+        Cookies.remove("token");
+        setUser(null);
+        router.push("/Login");
+      }
+    };
+
+    // Faollik hodisalarini tinglash
+    const events = ["mousemove", "keydown", "click", "scroll", "touchstart"];
+    events.forEach((event) => window.addEventListener(event, updateActivity));
+
+    // Har 10 soniyada faolsizlikni tekshirish
+    inactivityTimer = setInterval(checkInactivity, 10000);
+
+    // Tozalash
+    return () => {
+      events.forEach((event) => window.removeEventListener(event, updateActivity));
+      clearInterval(inactivityTimer);
+    };
+  }, [router]);
+
   // 🔌 Internet holatini kuzatish
   useEffect(() => {
     const handleOnline = () => {
@@ -63,6 +100,7 @@ export default function App({ Component, pageProps }) {
       })
       .catch((err) => {
         console.error("❌ Token noto‘g‘ri yoki eskirgan:", err.response?.data);
+        localStorage.removeItem("token");
         Cookies.remove("token");
         router.replace("/Login");
       })
