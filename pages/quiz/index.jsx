@@ -108,49 +108,64 @@ export default function Home() {
     }));
   };
 
-  const handleSaveAnswers = async () => {
-    const userId = localStorage.getItem("userId");
-    if (!userId) {
-      alert("Foydalanuvchi ID topilmadi. Iltimos, tizimga kiring!");
-      return;
-    }
+const handleSaveAnswers = async () => {
+  const userId = localStorage.getItem("userId");
+  if (!userId) {
+    alert("Foydalanuvchi ID topilmadi. Iltimos, tizimga kiring!");
+    return;
+  }
 
-    if (!selectedSubject) {
-      alert("Fanni tanlang!");
-      return;
-    }
+  if (!selectedSubject) {
+    alert("Fanni tanlang!");
+    return;
+  }
 
-    const answers = Object.values(selectedOptions).map(
-      ({ questionId, variantId }) => ({
-        questionId,
-        variantId,
-      })
-    );
+  // Barcha savollar
+  const allQuestions =
+    selectedDate && groupedQuestions[selectedDate]
+      ? groupedQuestions[selectedDate]
+      : [];
 
-    if (answers.length === 0) {
-      alert("Iltimos, hech bo‘lmaganda bitta javob belgilang!");
-      return;
-    }
+  // Tanlangan javoblar ro‘yxati
+  const answers = Object.values(selectedOptions).map(
+    ({ questionId, variantId }) => ({
+      questionId,
+      variantId,
+    })
+  );
 
-    try {
-      setLoading(true);
-      await axios.post("https://backed1.onrender.com/api/save-answers", {
-        answers,
-        userId,
-        subjectId: selectedSubject,
-      });
+  // Hech qanday savolga javob belgilanmagan bo‘lsa
+  if (answers.length === 0) {
+    alert("Iltimos, hech bo‘lmaganda bitta javob belgilang!");
+    return;
+  }
 
-      alert("Javoblar muvaffaqiyatli saqlandi!");
-      router.push({
-        pathname: "/Natija",
-        query: { subjectId: selectedSubject },
-      });
-    } catch (error) {
-      alert("Javoblarni saqlashda xatolik yuz berdi");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Agar ba'zi savollarga javob tanlanmagan bo‘lsa
+  if (answers.length < allQuestions.length) {
+    alert("Iltimos, barcha savollarga javob belgilang!");
+    return;
+  }
+
+  try {
+    setLoading(true);
+    await axios.post("https://backed1.onrender.com/api/save-answers", {
+      answers,
+      userId,
+      subjectId: selectedSubject,
+    });
+
+    alert("Javoblar muvaffaqiyatli saqlandi!");
+    router.push({
+      pathname: "/Natija",
+      query: { subjectId: selectedSubject },
+    });
+  } catch (error) {
+    alert("Javoblarni saqlashda xatolik yuz berdi");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
   <div className="min-h-screen bg-gray-100 flex flex-col items-center p-6 relative">
