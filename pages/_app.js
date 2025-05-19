@@ -15,7 +15,7 @@ export default function App({ Component, pageProps }) {
 
   // Foydalanuvchi faolligini kuzatish va 3 soatlik faolsizlikni tekshirish
   useEffect(() => {
-    const INACTIVITY_TIMEOUT = 3 * 60 * 60 * 1000; // 3 soat (millisekundlarda)
+    const INACTIVITY_TIMEOUT = 2 * 60 * 60 * 1000; // 3 soat (millisekundlarda)
     let lastActivity = Date.now();
     let inactivityTimer;
 
