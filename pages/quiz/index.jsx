@@ -120,6 +120,12 @@ export default function Home() {
       return;
     }
 
+    if (!selectedDate || !groupedQuestions[selectedDate]) {
+      alert("Sanani tanlang!");
+      return;
+    }
+
+    const currentQuestions = groupedQuestions[selectedDate];
     const answers = Object.values(selectedOptions).map(
       ({ questionId, variantId }) => ({
         questionId,
@@ -127,8 +133,9 @@ export default function Home() {
       })
     );
 
-    if (answers.length === 0) {
-      alert("Iltimos, hech bo‘lmaganda bitta javob belgilang!");
+    // Barcha savollar belgilanganligini tekshirish
+    if (answers.length < currentQuestions.length) {
+      alert("Barcha savollarga javob berilmadi! Iltimos, barcha savollarni belgilang.");
       return;
     }
 
@@ -153,72 +160,72 @@ export default function Home() {
   };
 
   return (
-  <div className="min-h-screen bg-gray-100 flex flex-col items-center p-6 relative">
-    {/* Ekranning markazida loader chiqadi */}
-    {loading && (
-      <div className="fixed inset-0 flex items-center justify-center bg-white bg-opacity-50 z-50">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500 border-solid"></div>
-      </div>
-    )}
-
-    <h1 className="text-3xl font-bold text-blue-700 mb-6">Fanlar ro‘yxati</h1>
-
-    {error && <p className="text-red-500 mb-4">Xatolik: {error}</p>}
-
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 w-full max-w-4xl">
-      {subjects.map((subject) => (
-        <button
-          key={subject.id}
-          className="bg-blue-500 text-white px-6 py-3 rounded-lg shadow-md hover:bg-blue-600 transition"
-          onClick={() => fetchQuestions(subject.id)}
-        >
-          {subject.name}
-        </button>
-      ))}
-    </div>
-
-    {selectedSubject && (
-      <div className="mt-6 w-full max-w-4xl bg-white p-6 rounded-lg shadow-md">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-4">
-          Savollar sanasi bo‘yicha
-        </h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {Object.keys(groupedQuestions)
-            .sort()
-            .map((date) => (
-              <button
-                key={date}
-                onClick={() => setSelectedDate(date)}
-                className="bg-gray-200 p-3 rounded-lg shadow-md hover:bg-gray-300 transition"
-              >
-                {formatDate(date)}
-              </button>
-            ))}
+    <div className="min-h-screen bg-gray-100 flex flex-col items-center p-6 relative">
+      {/* Ekranning markazida loader chiqadi */}
+      {loading && (
+        <div className="fixed inset-0 flex items-center justify-center bg-white bg-opacity-50 z-50">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500 border-solid"></div>
+meetsupports.com/wp-content/uploads/2022/03/pexels-cottonbro-5531383-scaled.jpg" alt="Students taking a test" />
         </div>
-      </div>
-    )}
+      )}
 
-    {selectedDate && groupedQuestions[selectedDate] && (
-      <div className="mt-6 w-full max-w-4xl bg-white p-6 rounded-lg shadow-md">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-4">Savollar</h2>
-        {groupedQuestions[selectedDate].map((question) => (
-          <Question
-            key={question.id}
-            question={question}
-            selectedOptions={selectedOptions}
-            handleOptionChange={handleOptionChange}
-          />
+      <h1 className="text-3xl font-bold text-blue-700 mb-6">Fanlar ro‘yxati</h1>
+
+      {error && <p className="text-red-500 mb-4">Xatolik: {error}</p>}
+
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 w-full max-w-4xl">
+        {subjects.map((subject) => (
+          <button
+            key={subject.id}
+            className="bg-blue-500 text-white px-6 py-3 rounded-lg shadow-md hover:bg-blue-600 transition"
+            onClick={() => fetchQuestions(subject.id)}
+          >
+            {subject.name}
+          </button>
         ))}
-        <button
-          onClick={handleSaveAnswers}
-          className="mt-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-md hover:bg-green-600 transition"
-          disabled={loading}
-        >
-          Javoblarni Saqlash
-        </button>
       </div>
-    )}
-  </div>
-);
 
+      {selectedSubject && (
+        <div className="mt-6 w-full max-w-4xl bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-2xl font-semibold text-gray-800 mb-4">
+            Savollar sanasi bo‘yicha
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {Object.keys(groupedQuestions)
+              .sort()
+              .map((date) => (
+                <button
+                  key={date}
+                  onClick={() => setSelectedDate(date)}
+                  className="bg-gray-200 p-3 rounded-lg shadow-md hover:bg-gray-300 transition"
+                >
+                  {formatDate(date)}
+                </button>
+              ))}
+          </div>
+        </div>
+      )}
+
+      {selectedDate && groupedQuestions[selectedDate] && (
+        <div className="mt-6 w-full max-w-4xl bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-2xl font-semibold text-gray-800 mb-4">Savollar</h2>
+          {groupedQuestions[selectedDate].map((question) => (
+            <Question
+              key={question.id}
+              question={question}
+              selectedOptions={selectedOptions}
+              handleOptionChange={handleOptionChange}
+            />
+          ))}
+          <button
+            onClick={handleSaveAnswers}
+            className="mt-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-md hover:bg-green-600 transition"
+            disabled={loading}
+          >
+            Javoblarni Saqlash
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
