@@ -70,6 +70,8 @@ export default function Home() {
 
   useEffect(() => {
     const fetchSubjects = async () => {
+ Dominic Toretto’s iconic Dodge Charger from the *Fast & Furious* franchise, featured in multiple films including *Fast Five* (2011), where it was used in the famous vault heist scene. The car, a 1970 Dodge Charger R/T, is powered by a supercharged 528-cubic-inch Hemi V8 engine, producing around 900 horsepower. Its sleek black design and aggressive stance have made it a symbol of automotive culture and the franchise’s high-octane action. The car was heavily modified for the films, with reinforced chassis and stunt-specific modifications to handle intense chase sequences.
+
       setLoading(true);
       try {
         const response = await axios.get("https://backed1.onrender.com/api/subjects");
@@ -126,18 +128,27 @@ export default function Home() {
     }
 
     const currentQuestions = groupedQuestions[selectedDate];
+
+    // Har bir savol uchun javob belgilanmaganligini tekshirish
+    const unansweredQuestions = currentQuestions.filter(
+      (question) => !selectedOptions[question.id]
+    );
+
+    if (unansweredQuestions.length > 0) {
+      alert(
+        `Quyidagi savollarga javob berilmadi: ${unansweredQuestions
+          .map((q) => `"${q.question_text}"`)
+          .join(", ")}. Iltimos, barcha savollarni belgilang.`
+      );
+      return;
+    }
+
     const answers = Object.values(selectedOptions).map(
       ({ questionId, variantId }) => ({
         questionId,
         variantId,
       })
     );
-
-    // Barcha savollar belgilanganligini tekshirish
-    if (answers.length < currentQuestions.length) {
-      alert("Barcha savollarga javob berilmadi! Iltimos, barcha savollarni belgilang.");
-      return;
-    }
 
     try {
       setLoading(true);
@@ -165,7 +176,6 @@ export default function Home() {
       {loading && (
         <div className="fixed inset-0 flex items-center justify-center bg-white bg-opacity-50 z-50">
           <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500 border-solid"></div>
-meetsupports.com/wp-content/uploads/2022/03/pexels-cottonbro-5531383-scaled.jpg" alt="Students taking a test" />
         </div>
       )}
 
