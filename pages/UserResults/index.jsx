@@ -1,5 +1,3 @@
-// pages/UserResults.jsx
-
 import React, { useState, useEffect } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
@@ -77,6 +75,35 @@ const UserResults = () => {
     }
   };
 
+  const handleDownloadPDF = async () => {
+    const token = localStorage.getItem("token");
+    const userId = localStorage.getItem("userId");
+    const subjectId = localStorage.getItem("subjectId");
+
+    try {
+      const url = subjectId
+        ? `https://backed1.onrender.com/api/userResults/pdf?userId=${userId}&subjectId=${subjectId}`
+        : `https://backed1.onrender.com/api/userResults/pdf?userId=${userId}`;
+
+      const response = await axios.get(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        responseType: "blob",
+      });
+
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const link = document.createElement("a");
+      link.href = window.URL.createObjectURL(blob);
+      link.download = `user_results_${userId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      alert("PDF yuklashda xatolik: " + (err.response?.data?.error || "Xatolik"));
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 p-4 sm:p-6">
       <Head>
@@ -90,12 +117,32 @@ const UserResults = () => {
             <BarChart size={24} />
             Foydalanuvchi Natijalari
           </h2>
-          <button
-            onClick={handleBack}
-            className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition duration-200"
-          >
-            Orqaga
-          </button>
+          <div className="flex gap-4">
+            <button
+              onClick={handleDownloadPDF}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200 flex items-center gap-2"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              PDF yuklab olish
+            </button>
+            <button
+              onClick={handleBack}
+              className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition duration-200"
+            >
+              Orqaga
+            </button>
+          </div>
         </div>
 
         {loading && <p className="text-gray-600">Natijalar yuklanmoqda...</p>}
