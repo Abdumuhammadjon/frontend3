@@ -82,8 +82,8 @@ const UserResults = () => {
 
     try {
       const url = subjectId
-        ? `https://backed1.onrender.com/api/UserResults/pdf?userId=${userId}&subjectId=${subjectId}`
-        : `https://backed1.onrender.com/api/UserResults/pdf?userId=${userId}`;
+        ? `https://backed1.onrender.com/api/userResults/pdf?userId=${userId}&subjectId=${subjectId}`
+        : `https://backed1.onrender.com/api/userResults/pdf?userId=${userId}`;
 
       const response = await axios.get(url, {
         headers: {
