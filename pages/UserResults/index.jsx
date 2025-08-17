@@ -61,7 +61,7 @@ const UserResults = () => {
 
     try {
       await axios.delete(
-        `https://backed1.onrender.com/api/userResult/${subjectId}`,
+        `https://backed1.onrender.com/api/userResult/${resultId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -81,7 +81,7 @@ const UserResults = () => {
     const subjectId = localStorage.getItem("subjectId");
 
     try {
-      const url = `https://backed1.onrender.com/api/user-results/${userId}`;
+      const url = `https://backed1.onrender.com/api/user-results/${subjectId}`;
 
       const response = await axios.get(url, {
         headers: {
