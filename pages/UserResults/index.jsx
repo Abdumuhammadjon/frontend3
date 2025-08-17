@@ -81,7 +81,7 @@ const UserResults = () => {
     const subjectId = localStorage.getItem("subjectId");
 
     try {
-      const url = `https://backed1.onrender.com/api/user-results.pdf`;
+      const url = `https://backed1.onrender.com/api/user-results/${userId}`;
 
       const response = await axios.get(url, {
         headers: {
