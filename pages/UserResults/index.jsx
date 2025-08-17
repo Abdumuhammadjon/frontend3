@@ -61,7 +61,7 @@ const UserResults = () => {
 
     try {
       await axios.delete(
-        `https://backed1.onrender.com/api/userResult/${resultId}`,
+        `https://backed1.onrender.com/api/userResult/${subjectId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
