@@ -104,7 +104,7 @@ const GroupedQuestions = ({ subjectId }) => {
   const handleDownloadPDF = async () => {
     try {
       const response = await axios.get(
-        `https://backed1.onrender.com/api/subject-questions/${subjectId}`,
+        `https://backed1.onrender.com/api/subject-questions/${idToUse}`,
         { responseType: "blob" }
       );
 
