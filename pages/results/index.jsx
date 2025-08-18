@@ -10,9 +10,12 @@ const GroupedQuestions = ({ subjectId }) => {
   const [error, setError] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  
   const router = useRouter();
+  
 
   useEffect(() => {
+    
     const storedSubjectId = localStorage.getItem("subjectId");
     const idToUse = subjectId || storedSubjectId;
 
@@ -102,9 +105,10 @@ const GroupedQuestions = ({ subjectId }) => {
 
   // 📥 PDF yuklab olish funksiyasi
   const handleDownloadPDF = async () => {
+    const subjectId = localStroge.getItem("subjectId");
     try {
       const response = await axios.get(
-        `https://backed1.onrender.com/api/subject-questions/${storedSubjectId}`,
+        `https://backed1.onrender.com/api/subject-questions/${subjectId}`,
         { responseType: "blob" }
       );
 
