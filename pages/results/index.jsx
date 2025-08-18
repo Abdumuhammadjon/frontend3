@@ -100,6 +100,26 @@ const GroupedQuestions = ({ subjectId }) => {
     });
   };
 
+  // 📥 PDF yuklab olish funksiyasi
+  const handleDownloadPDF = async () => {
+    try {
+      const response = await axios.get(
+        `https://backed1.onrender.com/api/subject-questions/${subjectId}`,
+        { responseType: "blob" }
+      );
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `subject-${subjectId}-questions.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error("PDF yuklab olishda xato:", err);
+    }
+  };
+
   return (
     <div className="flex flex-col -ml-5 h-screen bg-gray-100">
       {/* Navbar */}
@@ -137,6 +157,15 @@ const GroupedQuestions = ({ subjectId }) => {
 
         {/* Main Content */}
         <div className={`flex-1 p-6 transition-all duration-300 ${isSidebarOpen ? "ml-64" : "ml-20"}`}>
+          
+          {/* 📄 PDF yuklab olish tugmasi */}
+          <button
+            onClick={handleDownloadPDF}
+            className="mb-6 bg-green-500 text-white px-6 py-2 rounded-lg shadow-md hover:bg-green-600 transition-colors duration-200"
+          >
+            📄 Savollarni PDF’da yuklab olish
+          </button>
+
           {loading ? (
             <div className="flex justify-center items-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -175,9 +204,7 @@ const GroupedQuestions = ({ subjectId }) => {
                               {question.options.map((option) => (
                                 <li
                                   key={option.id}
-                                  className={`p-2 rounded-lg ${
-                                    option.is_correct ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-800'
-                                  }`}
+                                  className={`p-2 rounded-lg ${option.is_correct ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-800'}`}
                                 >
                                   {option.option_text}
                                   {option.is_correct && (
