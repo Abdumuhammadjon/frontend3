@@ -105,7 +105,8 @@ const GroupedQuestions = ({ subjectId }) => {
 
   // 📥 PDF yuklab olish funksiyasi
   const handleDownloadPDF = async () => {
-    const subjectId = localStroge.getItem("subjectId");
+   const subjectId = localStorage.getItem("subjectId");
+
     try {
       const response = await axios.get(
         `https://backed1.onrender.com/api/subject-questions/${subjectId}`,
