@@ -10,12 +10,10 @@ const GroupedQuestions = ({ subjectId }) => {
   const [error, setError] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  
+
   const router = useRouter();
-  
 
   useEffect(() => {
-    
     const storedSubjectId = localStorage.getItem("subjectId");
     const idToUse = subjectId || storedSubjectId;
 
@@ -103,26 +101,41 @@ const GroupedQuestions = ({ subjectId }) => {
     });
   };
 
-  // 📥 PDF yuklab olish funksiyasi
-  const handleDownloadPDF = async () => {
-   const subjectId = localStorage.getItem("subjectId");
+  // 📥 Sana bo‘yicha PDF yuklab olish
+  const handleDownloadPDFByDate = (date) => {
+    const questions = groupedQuestions[date];
+    if (!questions || questions.length === 0) return;
 
-    try {
-      const response = await axios.get(
-        `https://backed1.onrender.com/api/subject-questions/${subjectId}`,
-        { responseType: "blob" }
-      );
+    import("jspdf").then(({ jsPDF }) => {
+      const doc = new jsPDF();
 
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", `subject-${subjectId}-questions.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (err) {
-      console.error("PDF yuklab olishda xato:", err);
-    }
+      doc.setFontSize(16);
+      doc.text(`Savollar to'plami (${formatDate(date)})`, 10, 10);
+
+      let y = 20;
+      questions.forEach((q, index) => {
+        doc.setFontSize(12);
+        doc.text(`${index + 1}. ${q.question_text}`, 10, y);
+        y += 8;
+
+        q.options.forEach((opt) => {
+          doc.text(
+            `- ${opt.option_text} ${opt.is_correct ? "(✅)" : ""}`,
+            15,
+            y
+          );
+          y += 6;
+        });
+
+        y += 4;
+        if (y > 270) {
+          doc.addPage();
+          y = 20;
+        }
+      });
+
+      doc.save(`savollar-${date}.pdf`);
+    });
   };
 
   return (
@@ -162,15 +175,6 @@ const GroupedQuestions = ({ subjectId }) => {
 
         {/* Main Content */}
         <div className={`flex-1 p-6 transition-all duration-300 ${isSidebarOpen ? "ml-64" : "ml-20"}`}>
-          
-          {/* 📄 PDF yuklab olish tugmasi */}
-          <button
-            onClick={handleDownloadPDF}
-            className="mb-6 bg-green-500 text-white px-6 py-2 rounded-lg shadow-md hover:bg-green-600 transition-colors duration-200"
-          >
-            📄 Savollarni PDF’da yuklab olish
-          </button>
-
           {loading ? (
             <div className="flex justify-center items-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -191,6 +195,14 @@ const GroupedQuestions = ({ subjectId }) => {
                   </button>
                   {selectedDate === date && (
                     <div className="mt-2 p-4 bg-white rounded-lg shadow-md">
+                      {/* 📄 Shu sanaga tegishli PDF tugmasi */}
+                      <button
+                        onClick={() => handleDownloadPDFByDate(date)}
+                        className="mb-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-md hover:bg-green-600 transition-colors duration-200"
+                      >
+                        📄 Ushbu to‘plamni PDF’da yuklab olish
+                      </button>
+
                       {groupedQuestions[date].map((question, index) => (
                         <div key={index} className="mb-4 border-b pb-2 last:border-b-0">
                           <div className="flex justify-between items-center mb-2">
