@@ -75,62 +75,149 @@ const UserResults = () => {
     }
   };
 
-  const handleDownloadPDF = async () => {
-    try {
-      const [{ jsPDF }] = await Promise.all([import("jspdf")]);
+ // 📥 PDF: sana va 1.5 soat farqiga ko'ra alohida varaq
+const handleDownloadPDF = async () => {
+  try {
+    if (!results || results.length === 0) {
+      alert("PDF uchun natijalar topilmadi.");
+      return;
+    }
 
-      const doc = new jsPDF();
+    const [{ jsPDF }, autoTable] = await Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable"),
+    ]);
+
+    // Yordamchi: local YYYY-MM-DD kalit
+    const toLocalDateKey = (d) => {
+      const dt = new Date(d);
+      const y = dt.getFullYear();
+      const m = String(dt.getMonth() + 1).padStart(2, "0");
+      const day = String(dt.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    };
+
+    // Natijalarni vaqt bo'yicha tayyorlash
+    const items = [...results]
+      .map((r) => ({ ...r, _dt: new Date(r.date) }))
+      .filter((r) => !isNaN(r._dt.getTime()))
+      .sort((a, b) => a._dt - b._dt);
+
+    if (items.length === 0) {
+      alert("Sana/vaqt noto'g'ri formatda. PDF tuzilmadi.");
+      return;
+    }
+
+    // 1) Avval SANAGA ko'ra guruhlaymiz (aralashmasin)
+    const byDate = items.reduce((acc, r) => {
+      const key = toLocalDateKey(r._dt);
+      (acc[key] ||= []).push(r);
+      return acc;
+    }, {});
+
+    // 2) Har bir sana ichida 1.5 soat farq bilan SESSIONlarga bo'lamiz
+    const SESSION_GAP_MS = 90 * 60 * 1000;
+    const sessionGroups = []; // har bir element - bitta varaq (page)
+
+    Object.keys(byDate)
+      .sort() // sanalarni ko'tarilish tartibida
+      .forEach((dateKey) => {
+        const list = byDate[dateKey].sort((a, b) => a._dt - b._dt);
+        let current = [];
+
+        for (let i = 0; i < list.length; i++) {
+          const item = list[i];
+          if (current.length === 0) {
+            current.push(item);
+            continue;
+          }
+          const prev = current[current.length - 1];
+          const gapTooLarge = item._dt - prev._dt > SESSION_GAP_MS;
+
+          // Sana almashsa yoki 1.5 soatdan katta tanaffus bo'lsa -> yangi varaq
+          const dateChanged =
+            toLocalDateKey(item._dt) !== toLocalDateKey(prev._dt);
+
+          if (dateChanged || gapTooLarge) {
+            sessionGroups.push(current);
+            current = [item];
+          } else {
+            current.push(item);
+          }
+        }
+        if (current.length) sessionGroups.push(current);
+      });
+
+    // 3) PDF yaratish
+    const doc = new jsPDF();
+
+    sessionGroups.forEach((group, idx) => {
+      if (idx !== 0) doc.addPage();
+
+      // Sarlavha
       doc.setFontSize(16);
       doc.setTextColor(40, 60, 120);
       doc.text("📊 Foydalanuvchi Natijalari", 105, 15, { align: "center" });
 
-      // Natijalarni sanaga qarab guruhlash
-      const groupedByDate = results.reduce((acc, result) => {
-        const date = result.date.split("T")[0]; // faqat YYYY-MM-DD qismini olish
-        if (!acc[date]) acc[date] = [];
-        acc[date].push(result);
-        return acc;
-      }, {});
+      const first = group[0]._dt;
+      const last = group[group.length - 1]._dt;
 
-      let firstPage = true;
-
-      Object.keys(groupedByDate).sort().forEach((date) => {
-        if (!firstPage) {
-          doc.addPage();
-        }
-        firstPage = false;
-
-        doc.setFontSize(14);
-        doc.setTextColor(0, 0, 0);
-        doc.text(`📅 Sana: ${date}`, 14, 25);
-
-        let startY = 35;
-        groupedByDate[date].forEach((res, idx) => {
-          const text = `${idx + 1}. ${res.username} | To‘g‘ri javoblar: ${res.correctAnswers}/${res.totalQuestions} | Foiz: ${res.scorePercentage}%`;
-          doc.text(text, 14, startY);
-          startY += 10;
-
-          if (startY > 270) {
-            doc.addPage();
-            startY = 20;
-          }
-        });
+      const dateLabel = first.toLocaleDateString("uz-UZ", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
       });
 
-      // Footer sahifa raqami
-      const pageCount = doc.internal.getNumberOfPages();
-      for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.setFontSize(10);
-        doc.setTextColor(120);
-        doc.text(`Sahifa ${i} / ${pageCount}`, 200, 290, { align: "right" });
-      }
+      const timeWindow = `${first.toLocaleTimeString("uz-UZ", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })} – ${last.toLocaleTimeString("uz-UZ", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}`;
 
-      doc.save("foydalanuvchi_natijalari.pdf");
-    } catch (err) {
-      alert("PDF yaratishda xatolik: " + err.message);
+      doc.setFontSize(12);
+      doc.setTextColor(0, 0, 0);
+      doc.text(`📅 Sana: ${dateLabel}   🕒 Oralig'i: ${timeWindow}`, 14, 25);
+
+      // Jadval
+      autoTable.default(doc, {
+        startY: 35,
+        head: [["Foydalanuvchi", "To‘g‘ri", "Jami", "Foiz", "Vaqt"]],
+        body: group.map((r) => [
+          r.username,
+          String(r.correctAnswers ?? ""),
+          String(r.totalQuestions ?? ""),
+          (r.scorePercentage != null ? `${r.scorePercentage}%` : ""),
+          r._dt.toLocaleTimeString("uz-UZ", {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        ]),
+        theme: "striped",
+        styles: { fontSize: 10, halign: "center", cellPadding: 3 },
+        headStyles: { fillColor: [40, 60, 120], textColor: 255 },
+        columnStyles: { 0: { halign: "left" } },
+        margin: { left: 14, right: 14 },
+        tableWidth: "auto",
+      });
+    });
+
+    // Footer: sahifa raqamlari
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(10);
+      doc.setTextColor(120);
+      doc.text(`Sahifa ${i} / ${pageCount}`, 200, 290, { align: "right" });
     }
-  };
+
+    doc.save("foydalanuvchi_natijalari_guruhlangan.pdf");
+  } catch (err) {
+    alert("PDF yaratishda xatolik: " + (err?.message || "Noma'lum xatolik"));
+  }
+};
+
 
 
   return (
