@@ -101,83 +101,58 @@ const GroupedQuestions = ({ subjectId }) => {
     });
   };
 
-  // 📥 Sana bo‘yicha PDF yuklab olish (jadval dizayn bilan)
-  // 📥 Sana bo‘yicha PDF yuklab olish (tozalangan va joy qo‘shilgan)
-// 📥 Sana bo‘yicha PDF yuklab olish (ko'rinmay qolish muammosi TUZATILDI)
-const handleDownloadPDFByDate = (date) => {
-  const questions = groupedQuestions[date];
-  if (!questions?.length) return;
+  // 📥 Sana bo‘yicha PDF yuklab olish (dizaynli)
+  const handleDownloadPDFByDate = (date) => {
+    const questions = groupedQuestions[date];
+    if (!questions || questions.length === 0) return;
 
-  Promise.all([import("jspdf"), import("jspdf-autotable")]).then(([{ jsPDF }, autoTable]) => {
-    const doc = new jsPDF();
+    import("jspdf").then(({ jsPDF }) => {
+      const doc = new jsPDF();
 
-    // Sarlavha
-    doc.setFontSize(18);
-    doc.setTextColor(40, 60, 120);
-    doc.text(`📘 Savollar to'plami (${formatDate(date)})`, 105, 15, { align: "center" });
+      // Sarlavha
+      doc.setFontSize(18);
+      doc.setTextColor(40, 60, 120);
+      doc.text(`📘 Savollar to'plami (${formatDate(date)})`, 105, 15, { align: "center" });
 
-    let y = 30;
+      let y = 30;
+      questions.forEach((q, index) => {
+        // Savol
+        doc.setFontSize(13);
+        doc.setTextColor(0, 0, 0);
+        doc.text(`${index + 1}. ${q.question_text}`, 10, y);
+        y += 8;
 
-    questions.forEach((q, index) => {
-      // Savol matni
-      doc.setFontSize(13);
-      doc.setTextColor(0, 0, 0);
-      doc.text(`${index + 1}. ${q.question_text}`, 10, y);
-      y += 10; // savol va variantlar orasiga bo'sh joy
-
-      // Jadval uchun qatorlar
-      const rows = q.options.map((opt) => [
-        opt.option_text + (opt.is_correct ? "  ✓" : "")
-      ]);
-
-      autoTable.default(doc, {
-        startY: y,
-        body: rows,
-        theme: "grid", // soddaroq jadval
-        styles: {
-          fontSize: 11,
-          halign: "left",
-          cellPadding: 3,
-          fillColor: [255, 255, 255], // default oq fon
-          textColor: [35, 35, 35],    // default kulrang matn
-        },
-        alternateRowStyles: { fillColor: [248, 248, 248] }, // navbatdagi qatorda engil fon
-        // ✅ To'g'ri javobni yashil fon + yashil matn bilan ajratamiz
-        didParseCell: (data) => {
-          if (data.section === "body") {
-            const r = data.row.index;
-            if (q.options[r]?.is_correct) {
-              data.cell.styles.fillColor = [220, 255, 220]; // soft green
-              data.cell.styles.textColor = [0, 100, 0];
-            }
+        // Variantlar
+        q.options.forEach((opt) => {
+          if (opt.is_correct) {
+            doc.setTextColor(0, 150, 0); // Yashil rang
+            doc.text(`• ${opt.option_text}  ✓`, 15, y);
+          } else {
+            doc.setTextColor(80, 80, 80);
+            doc.text(`• ${opt.option_text}`, 15, y);
           }
-        },
-        margin: { left: 10, right: 10 },
-        tableWidth: "auto",
+          y += 6;
+        });
+
+        y += 6;
+        if (y > 270) {
+          doc.addPage();
+          y = 20;
+        }
       });
 
-      y = doc.lastAutoTable.finalY + 12; // keyingi savol uchun bo'sh joy
-
-      // Yangi sahifa kerak bo'lsa
-      if (y > 260) {
-        doc.addPage();
-        y = 20;
+      // Footer (sahifa raqamlari)
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Sahifa ${i} / ${pageCount}`, 200, 290, { align: "right" });
       }
+
+      doc.save(`savollar-${date}.pdf`);
     });
-
-    // Footer: sahifa raqamlari
-    const pageCount = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(10);
-      doc.setTextColor(100);
-      doc.text(`Sahifa ${i} / ${pageCount}`, 200, 290, { align: "right" });
-    }
-
-    doc.save(`savollar-${date}.pdf`);
-  });
-};
-
+  };
 
   return (
     <div className="flex flex-col -ml-5 h-screen bg-gray-100">
