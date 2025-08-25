@@ -2,18 +2,18 @@
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
-"scripts": {
-  "dev": "next dev",
-  "build": "next build",
-  "start": "next start"
-}
-,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
   "dependencies": {
     "@shadcn/ui": "^0.0.4",
     "axios": "^1.8.3",
     "chart.js": "^4.4.8",
     "framer-motion": "^12.4.10",
     "js-cookie": "^3.0.5",
+    "jspdf": "^3.0.1",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.483.0",
     "next": "15.1.7",
