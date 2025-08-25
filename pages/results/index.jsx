@@ -103,14 +103,12 @@ const GroupedQuestions = ({ subjectId }) => {
 
   // 📥 Sana bo‘yicha PDF yuklab olish (jadval dizayn bilan)
   // 📥 Sana bo‘yicha PDF yuklab olish (tozalangan va joy qo‘shilgan)
+// 📥 Sana bo‘yicha PDF yuklab olish (ko'rinmay qolish muammosi TUZATILDI)
 const handleDownloadPDFByDate = (date) => {
   const questions = groupedQuestions[date];
-  if (!questions || questions.length === 0) return;
+  if (!questions?.length) return;
 
-  Promise.all([
-    import("jspdf"),
-    import("jspdf-autotable")
-  ]).then(([{ jsPDF }, autoTable]) => {
+  Promise.all([import("jspdf"), import("jspdf-autotable")]).then(([{ jsPDF }, autoTable]) => {
     const doc = new jsPDF();
 
     // Sarlavha
@@ -125,9 +123,9 @@ const handleDownloadPDFByDate = (date) => {
       doc.setFontSize(13);
       doc.setTextColor(0, 0, 0);
       doc.text(`${index + 1}. ${q.question_text}`, 10, y);
-      y += 10; // 📌 savol va variantlar orasida joy
+      y += 10; // savol va variantlar orasiga bo'sh joy
 
-      // Variantlarni jadvalga tayyorlash (boshsiz jadval)
+      // Jadval uchun qatorlar
       const rows = q.options.map((opt) => [
         opt.option_text + (opt.is_correct ? "  ✓" : "")
       ]);
@@ -135,24 +133,39 @@ const handleDownloadPDFByDate = (date) => {
       autoTable.default(doc, {
         startY: y,
         body: rows,
-        styles: { fontSize: 11, halign: "left" },
-        bodyStyles: {
-          fillColor: (rowIndex) => q.options[rowIndex].is_correct ? [200, 255, 200] : [245, 245, 245],
-          textColor: (rowIndex) => q.options[rowIndex].is_correct ? [0, 100, 0] : [50, 50, 50],
+        theme: "grid", // soddaroq jadval
+        styles: {
+          fontSize: 11,
+          halign: "left",
+          cellPadding: 3,
+          fillColor: [255, 255, 255], // default oq fon
+          textColor: [35, 35, 35],    // default kulrang matn
         },
-        theme: "grid", // faqat jadval chiziqlari
+        alternateRowStyles: { fillColor: [248, 248, 248] }, // navbatdagi qatorda engil fon
+        // ✅ To'g'ri javobni yashil fon + yashil matn bilan ajratamiz
+        didParseCell: (data) => {
+          if (data.section === "body") {
+            const r = data.row.index;
+            if (q.options[r]?.is_correct) {
+              data.cell.styles.fillColor = [220, 255, 220]; // soft green
+              data.cell.styles.textColor = [0, 100, 0];
+            }
+          }
+        },
+        margin: { left: 10, right: 10 },
+        tableWidth: "auto",
       });
 
-      y = doc.lastAutoTable.finalY + 12; // keyingi savolga joy
+      y = doc.lastAutoTable.finalY + 12; // keyingi savol uchun bo'sh joy
 
-      // Agar joy tugasa yangi sahifa
+      // Yangi sahifa kerak bo'lsa
       if (y > 260) {
         doc.addPage();
         y = 20;
       }
     });
 
-    // Footer (sahifa raqamlari)
+    // Footer: sahifa raqamlari
     const pageCount = doc.internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
