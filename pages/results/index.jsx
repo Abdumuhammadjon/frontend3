@@ -101,7 +101,7 @@ const GroupedQuestions = ({ subjectId }) => {
     });
   };
 
-  // 📥 Sana bo‘yicha PDF yuklab olish
+  // 📥 Sana bo‘yicha PDF yuklab olish (dizaynli)
   const handleDownloadPDFByDate = (date) => {
     const questions = groupedQuestions[date];
     if (!questions || questions.length === 0) return;
@@ -109,30 +109,46 @@ const GroupedQuestions = ({ subjectId }) => {
     import("jspdf").then(({ jsPDF }) => {
       const doc = new jsPDF();
 
-      doc.setFontSize(16);
-      doc.text(`Savollar to'plami (${formatDate(date)})`, 10, 10);
+      // Sarlavha
+      doc.setFontSize(18);
+      doc.setTextColor(40, 60, 120);
+      doc.text(`📘 Savollar to'plami (${formatDate(date)})`, 105, 15, { align: "center" });
 
-      let y = 20;
+      let y = 30;
       questions.forEach((q, index) => {
-        doc.setFontSize(12);
+        // Savol
+        doc.setFontSize(13);
+        doc.setTextColor(0, 0, 0);
         doc.text(`${index + 1}. ${q.question_text}`, 10, y);
         y += 8;
 
+        // Variantlar
         q.options.forEach((opt) => {
-          doc.text(
-            `- ${opt.option_text} ${opt.is_correct ? "(✅)" : ""}`,
-            15,
-            y
-          );
+          if (opt.is_correct) {
+            doc.setTextColor(0, 150, 0); // Yashil rang
+            doc.text(`• ${opt.option_text}  ✓`, 15, y);
+          } else {
+            doc.setTextColor(80, 80, 80);
+            doc.text(`• ${opt.option_text}`, 15, y);
+          }
           y += 6;
         });
 
-        y += 4;
+        y += 6;
         if (y > 270) {
           doc.addPage();
           y = 20;
         }
       });
+
+      // Footer (sahifa raqamlari)
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Sahifa ${i} / ${pageCount}`, 200, 290, { align: "right" });
+      }
 
       doc.save(`savollar-${date}.pdf`);
     });
