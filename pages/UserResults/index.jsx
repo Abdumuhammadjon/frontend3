@@ -76,6 +76,7 @@ const UserResults = () => {
   };
 
 // 📥 PDF: foydalanuvchi javoblari vaqtiga tayanib (sana + 1.5 soat) alohida varaq
+// 📥 PDF: foydalanuvchi natijalari date (sana+vaqt) bo‘yicha (1.5 soat farq qilsa yangi varaq)
 const handleDownloadPDF = async () => {
   try {
     if (!results || results.length === 0) {
@@ -88,100 +89,39 @@ const handleDownloadPDF = async () => {
       import("jspdf-autotable"),
     ]);
 
-    // --- Yordamchi funksiyalar ---
-    const asDate = (v) => {
-      if (!v) return null;
-      const d = new Date(v);
-      return isNaN(d.getTime()) ? null : d;
-    };
-
-    // Natijadan attempt vaqti olish (birinchi navbatda result-level time, bo‘lmasa answers ichidan eng erta)
-    const pickAttemptTime = (r) => {
-      // 1) Result-level vaqtlar
-      const candidates = [
-        r.submittedAt,
-        r.finishedAt,
-        r.completedAt,
-        r.created_at,
-        r.createdAt,
-        r.date,
-      ]
-        .map(asDate)
-        .filter(Boolean);
-      if (candidates.length) return candidates[0];
-
-      // 2) Answers ichidan eng erta vaqt
-      if (Array.isArray(r.answers) && r.answers.length) {
-        const answerTimes = r.answers
-          .map((a) =>
-            asDate(
-              a.answeredAt ||
-                a.created_at ||
-                a.createdAt ||
-                a.time ||
-                a.timestamp
-            )
-          )
-          .filter(Boolean)
-          .sort((a, b) => a - b);
-        if (answerTimes.length) return answerTimes[0];
-      }
-
-      return null;
-    };
-
-    const dateKey = (d) => {
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, "0");
-      const day = String(d.getDate()).padStart(2, "0");
-      return `${y}-${m}-${day}`;
-    };
-
-    // --- Ma'lumotlarni tayyorlash ---
+    // --- Sana/vaqtni Date obyektga aylantirish ---
     const items = results
-      .map((r) => ({ ...r, _attemptAt: pickAttemptTime(r) }))
-      .filter((r) => r._attemptAt) // faqat vaqti aniqlanganlar
+      .map((r) => ({
+        ...r,
+        _attemptAt: new Date(r.date),
+      }))
+      .filter((r) => !isNaN(r._attemptAt.getTime()))
       .sort((a, b) => a._attemptAt - b._attemptAt);
 
     if (!items.length) {
-      alert(
-        "Natijalarda vaqt topilmadi. (submittedAt/finishedAt/... yoki answers[].answeredAt kerak)"
-      );
+      alert("Natijalarda to‘g‘ri date topilmadi.");
       return;
     }
 
-    // 1) SANAGA ko‘ra guruhlash
-    const byDate = items.reduce((acc, r) => {
-      const key = dateKey(r._attemptAt);
-      (acc[key] ||= []).push(r);
-      return acc;
-    }, {});
+    const GAP = 90 * 60 * 1000; // 90 minut
+    const sessions = [];
 
-    // 2) Sana ichida 1.5 soatlik tanaffus bo‘lsa, yangi session
-    const GAP = 90 * 60 * 1000; // 90 daqiqa
-    const sessions = []; // har element – alohida PDF varaq
-
-    Object.keys(byDate)
-      .sort()
-      .forEach((dkey) => {
-        const arr = byDate[dkey].sort((a, b) => a._attemptAt - b._attemptAt);
-        let current = [];
-        for (let i = 0; i < arr.length; i++) {
-          const cur = arr[i];
-          if (!current.length) {
-            current.push(cur);
-            continue;
-          }
-          const prev = current[current.length - 1];
-          if (cur._attemptAt - prev._attemptAt > GAP) {
-            sessions.push(current);
-            current = [cur];
-          } else {
-            current.push(cur);
-          }
-        }
-        if (current.length) sessions.push(current);
-      });
+    let current = [];
+    for (let i = 0; i < items.length; i++) {
+      const cur = items[i];
+      if (!current.length) {
+        current.push(cur);
+        continue;
+      }
+      const prev = current[current.length - 1];
+      if (cur._attemptAt - prev._attemptAt > GAP) {
+        sessions.push(current);
+        current = [cur];
+      } else {
+        current.push(cur);
+      }
+    }
+    if (current.length) sessions.push(current);
 
     // --- PDF yaratish ---
     const doc = new jsPDF();
@@ -189,7 +129,6 @@ const handleDownloadPDF = async () => {
     sessions.forEach((group, idx) => {
       if (idx !== 0) doc.addPage();
 
-      // Sarlavha
       doc.setFontSize(16);
       doc.setTextColor(40, 60, 120);
       doc.text("📊 Foydalanuvchi Natijalari", 105, 15, { align: "center" });
@@ -214,7 +153,6 @@ const handleDownloadPDF = async () => {
       doc.setTextColor(0, 0, 0);
       doc.text(`📅 Sana: ${dateLabel}   🕒 Oralig'i: ${timeWindow}`, 14, 25);
 
-      // Jadval
       autoTable.default(doc, {
         startY: 35,
         head: [["Foydalanuvchi", "To‘g‘ri", "Jami", "Foiz", "Vaqt"]],
