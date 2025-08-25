@@ -120,27 +120,44 @@ const GroupedQuestions = ({ subjectId }) => {
       let y = 30;
 
       questions.forEach((q, index) => {
-        // Savol matni
+        // Savol matnini avtomatik bo‘lish
         doc.setFontSize(13);
         doc.setTextColor(0, 0, 0);
-        doc.text(`${index + 1}. ${q.question_text}`, 10, y);
-        y += 6;
-
+      
+        const questionText = `${index + 1}. ${q.question_text}`;
+        const splitText = doc.splitTextToSize(questionText, 180); // 180px kenglik bo‘yicha bo‘linadi
+        doc.text(splitText, 10, y);
+        y += splitText.length * 7; // qancha qator bo‘lsa, shuncha pastga tushiramiz
+      
         // Variantlarni jadvalga tayyorlash
         const rows = q.options.map((opt) => [
           opt.option_text + (opt.is_correct ? "  ✓" : "")
         ]);
-
+      
         autoTable.default(doc, {
           startY: y,
-          head: [["Variantlar"]],
           body: rows,
           styles: { fontSize: 11, halign: "left" },
-          headStyles: { fillColor: [40, 60, 120], textColor: 255 },
-          bodyStyles: {
-            fillColor: (rowIndex) => q.options[rowIndex].is_correct ? [200, 255, 200] : [245, 245, 245],
-            textColor: (rowIndex) => q.options[rowIndex].is_correct ? [0, 100, 0] : [50, 50, 50],
-          },
+          theme: "grid",
+          didParseCell: (data) => {
+            if (data.section === "body") {
+              const r = data.row.index;
+              if (q.options[r]?.is_correct) {
+                data.cell.styles.fillColor = [220, 255, 220];
+                data.cell.styles.textColor = [0, 100, 0];
+              }
+            }
+          }
+        });
+      
+        y = doc.lastAutoTable.finalY + 10;
+      
+        if (y > 260) {
+          doc.addPage();
+          y = 20;
+        }
+      });
+      
         });
 
         y = doc.lastAutoTable.finalY + 10;
