@@ -76,31 +76,62 @@ const UserResults = () => {
   };
 
   const handleDownloadPDF = async () => {
-    const token = localStorage.getItem("token");
-    const userId = localStorage.getItem("userId");
-    const subjectId = localStorage.getItem("subjectId");
-
     try {
-      const url = `https://backed1.onrender.com/api/user-results/${subjectId}`;
+      const [{ jsPDF }] = await Promise.all([import("jspdf")]);
 
-      const response = await axios.get(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        responseType: "blob",
+      const doc = new jsPDF();
+      doc.setFontSize(16);
+      doc.setTextColor(40, 60, 120);
+      doc.text("📊 Foydalanuvchi Natijalari", 105, 15, { align: "center" });
+
+      // Natijalarni sanaga qarab guruhlash
+      const groupedByDate = results.reduce((acc, result) => {
+        const date = result.date.split("T")[0]; // faqat YYYY-MM-DD qismini olish
+        if (!acc[date]) acc[date] = [];
+        acc[date].push(result);
+        return acc;
+      }, {});
+
+      let firstPage = true;
+
+      Object.keys(groupedByDate).sort().forEach((date) => {
+        if (!firstPage) {
+          doc.addPage();
+        }
+        firstPage = false;
+
+        doc.setFontSize(14);
+        doc.setTextColor(0, 0, 0);
+        doc.text(`📅 Sana: ${date}`, 14, 25);
+
+        let startY = 35;
+        groupedByDate[date].forEach((res, idx) => {
+          const text = `${idx + 1}. ${res.username} | To‘g‘ri javoblar: ${res.correctAnswers}/${res.totalQuestions} | Foiz: ${res.scorePercentage}%`;
+          doc.text(text, 14, startY);
+          startY += 10;
+
+          if (startY > 270) {
+            doc.addPage();
+            startY = 20;
+          }
+        });
       });
 
-      const blob = new Blob([response.data], { type: "application/pdf" });
-      const link = document.createElement("a");
-      link.href = window.URL.createObjectURL(blob);
-      link.download = `user_results_${userId}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // Footer sahifa raqami
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(10);
+        doc.setTextColor(120);
+        doc.text(`Sahifa ${i} / ${pageCount}`, 200, 290, { align: "right" });
+      }
+
+      doc.save("foydalanuvchi_natijalari.pdf");
     } catch (err) {
-      alert("PDF yuklashda xatolik: " + (err.response?.data?.error || "Xatolik"));
+      alert("PDF yaratishda xatolik: " + err.message);
     }
   };
+
 
   return (
     <div className="min-h-screen bg-gray-100 p-4 sm:p-6">
