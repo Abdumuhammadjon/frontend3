@@ -101,64 +101,69 @@ const GroupedQuestions = ({ subjectId }) => {
     });
   };
 
-  // 📥 Sana bo‘yicha PDF yuklab olish (dizaynli)
- // 📥 Sana bo‘yicha PDF yuklab olish (jadval dizayn bilan)
-const handleDownloadPDFByDate = (date) => {
-  const questions = groupedQuestions[date];
-  if (!questions || questions.length === 0) return;
+  // 📥 Sana bo‘yicha PDF yuklab olish (jadval dizayn bilan)
+  const handleDownloadPDFByDate = (date) => {
+    const questions = groupedQuestions[date];
+    if (!questions || questions.length === 0) return;
 
-  Promise.all([
-    import("jspdf"),
-    import("jspdf-autotable")
-  ]).then(([{ jsPDF }, autoTable]) => {
-    const doc = new jsPDF();
+    Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable")
+    ]).then(([{ jsPDF }, autoTable]) => {
+      const doc = new jsPDF();
 
-    // Sarlavha
-    doc.setFontSize(18);
-    doc.setTextColor(40, 60, 120);
-    doc.text(`📘 Savollar to'plami (${formatDate(date)})`, 105, 15, { align: "center" });
+      // Sarlavha
+      doc.setFontSize(18);
+      doc.setTextColor(40, 60, 120);
+      doc.text(`📘 Savollar to'plami (${formatDate(date)})`, 105, 15, { align: "center" });
 
-    let y = 30;
+      let y = 30;
 
-    questions.forEach((q, index) => {
-      // Savol matni
-      doc.setFontSize(13);
-      doc.setTextColor(0, 0, 0);
-      doc.text(`${index + 1}. ${q.question_text}`, 10, y);
-      y += 6;
+      questions.forEach((q, index) => {
+        // Savol matni
+        doc.setFontSize(13);
+        doc.setTextColor(0, 0, 0);
+        doc.text(`${index + 1}. ${q.question_text}`, 10, y);
+        y += 6;
 
-      // Variantlarni jadvalga tayyorlash
-      const rows = q.options.map((opt) => [
-        opt.option_text + (opt.is_correct ? "  ✓" : "")
-      ]);
+        // Variantlarni jadvalga tayyorlash
+        const rows = q.options.map((opt) => [
+          opt.option_text + (opt.is_correct ? "  ✓" : "")
+        ]);
 
-      autoTable.default(doc, {
-        startY: y,
-        head: [["Variantlar"]],
-        body: rows,
-        styles: { fontSize: 11, halign: "left" },
-        headStyles: { fillColor: [40, 60, 120], textColor: 255 },
-        bodyStyles: {
-          fillColor: (rowIndex) => q.options[rowIndex].is_correct ? [200, 255, 200] : [245, 245, 245],
-          textColor: (rowIndex) => q.options[rowIndex].is_correct ? [0, 100, 0] : [50, 50, 50],
-        },
+        autoTable.default(doc, {
+          startY: y,
+          head: [["Variantlar"]],
+          body: rows,
+          styles: { fontSize: 11, halign: "left" },
+          headStyles: { fillColor: [40, 60, 120], textColor: 255 },
+          bodyStyles: {
+            fillColor: (rowIndex) => q.options[rowIndex].is_correct ? [200, 255, 200] : [245, 245, 245],
+            textColor: (rowIndex) => q.options[rowIndex].is_correct ? [0, 100, 0] : [50, 50, 50],
+          },
+        });
+
+        y = doc.lastAutoTable.finalY + 10;
+
+        // Agar joy tugasa yangi sahifa
+        if (y > 260) {
+          doc.addPage();
+          y = 20;
+        }
       });
 
-      y = doc.lastAutoTable.finalY + 10;
-
-      // Agar joy tugasa yangi sahifa
-      if (y > 260) {
-        doc.addPage();
-        y = 20;
+      // Footer (sahifa raqamlari)
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Sahifa ${i} / ${pageCount}`, 200, 290, { align: "right" });
       }
+
+      doc.save(`savollar-${date}.pdf`);
     });
-
-    // Footer (sahifa raqamlari)
-    const pageCount = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.
-
+  };
 
   return (
     <div className="flex flex-col -ml-5 h-screen bg-gray-100">
