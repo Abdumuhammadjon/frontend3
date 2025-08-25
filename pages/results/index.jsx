@@ -101,12 +101,15 @@ const GroupedQuestions = ({ subjectId }) => {
     });
   };
 
-  // 📥 Sana bo‘yicha PDF yuklab olish (dizaynli)
+  // 📥 Sana bo‘yicha PDF yuklab olish (jadval dizayn bilan)
   const handleDownloadPDFByDate = (date) => {
     const questions = groupedQuestions[date];
     if (!questions || questions.length === 0) return;
 
-    import("jspdf").then(({ jsPDF }) => {
+    Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable")
+    ]).then(([{ jsPDF }, autoTable]) => {
       const doc = new jsPDF();
 
       // Sarlavha
@@ -115,27 +118,35 @@ const GroupedQuestions = ({ subjectId }) => {
       doc.text(`📘 Savollar to'plami (${formatDate(date)})`, 105, 15, { align: "center" });
 
       let y = 30;
+
       questions.forEach((q, index) => {
-        // Savol
+        // Savol matni
         doc.setFontSize(13);
         doc.setTextColor(0, 0, 0);
         doc.text(`${index + 1}. ${q.question_text}`, 10, y);
-        y += 8;
+        y += 6;
 
-        // Variantlar
-        q.options.forEach((opt) => {
-          if (opt.is_correct) {
-            doc.setTextColor(0, 150, 0); // Yashil rang
-            doc.text(`• ${opt.option_text}  ✓`, 15, y);
-          } else {
-            doc.setTextColor(80, 80, 80);
-            doc.text(`• ${opt.option_text}`, 15, y);
-          }
-          y += 6;
+        // Variantlarni jadvalga tayyorlash
+        const rows = q.options.map((opt) => [
+          opt.option_text + (opt.is_correct ? "  ✓" : "")
+        ]);
+
+        autoTable.default(doc, {
+          startY: y,
+          head: [["Variantlar"]],
+          body: rows,
+          styles: { fontSize: 11, halign: "left" },
+          headStyles: { fillColor: [40, 60, 120], textColor: 255 },
+          bodyStyles: {
+            fillColor: (rowIndex) => q.options[rowIndex].is_correct ? [200, 255, 200] : [245, 245, 245],
+            textColor: (rowIndex) => q.options[rowIndex].is_correct ? [0, 100, 0] : [50, 50, 50],
+          },
         });
 
-        y += 6;
-        if (y > 270) {
+        y = doc.lastAutoTable.finalY + 10;
+
+        // Agar joy tugasa yangi sahifa
+        if (y > 260) {
           doc.addPage();
           y = 20;
         }
