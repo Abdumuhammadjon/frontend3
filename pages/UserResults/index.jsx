@@ -75,7 +75,7 @@ const UserResults = () => {
     }
   };
 
- // 📥 PDF: sana va 1.5 soat farqiga ko'ra alohida varaq
+// 📥 PDF: foydalanuvchi javoblari vaqtiga tayanib (sana + 1.5 soat) alohida varaq
 const handleDownloadPDF = async () => {
   try {
     if (!results || results.length === 0) {
@@ -88,70 +88,105 @@ const handleDownloadPDF = async () => {
       import("jspdf-autotable"),
     ]);
 
-    // Yordamchi: local YYYY-MM-DD kalit
-    const toLocalDateKey = (d) => {
-      const dt = new Date(d);
-      const y = dt.getFullYear();
-      const m = String(dt.getMonth() + 1).padStart(2, "0");
-      const day = String(dt.getDate()).padStart(2, "0");
+    // --- Yordamchi funksiyalar ---
+    const asDate = (v) => {
+      if (!v) return null;
+      const d = new Date(v);
+      return isNaN(d.getTime()) ? null : d;
+    };
+
+    // Natijadan attempt vaqti olish (birinchi navbatda result-level time, bo‘lmasa answers ichidan eng erta)
+    const pickAttemptTime = (r) => {
+      // 1) Result-level vaqtlar
+      const candidates = [
+        r.submittedAt,
+        r.finishedAt,
+        r.completedAt,
+        r.created_at,
+        r.createdAt,
+        r.date,
+      ]
+        .map(asDate)
+        .filter(Boolean);
+      if (candidates.length) return candidates[0];
+
+      // 2) Answers ichidan eng erta vaqt
+      if (Array.isArray(r.answers) && r.answers.length) {
+        const answerTimes = r.answers
+          .map((a) =>
+            asDate(
+              a.answeredAt ||
+                a.created_at ||
+                a.createdAt ||
+                a.time ||
+                a.timestamp
+            )
+          )
+          .filter(Boolean)
+          .sort((a, b) => a - b);
+        if (answerTimes.length) return answerTimes[0];
+      }
+
+      return null;
+    };
+
+    const dateKey = (d) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
       return `${y}-${m}-${day}`;
     };
 
-    // Natijalarni vaqt bo'yicha tayyorlash
-    const items = [...results]
-      .map((r) => ({ ...r, _dt: new Date(r.date) }))
-      .filter((r) => !isNaN(r._dt.getTime()))
-      .sort((a, b) => a._dt - b._dt);
+    // --- Ma'lumotlarni tayyorlash ---
+    const items = results
+      .map((r) => ({ ...r, _attemptAt: pickAttemptTime(r) }))
+      .filter((r) => r._attemptAt) // faqat vaqti aniqlanganlar
+      .sort((a, b) => a._attemptAt - b._attemptAt);
 
-    if (items.length === 0) {
-      alert("Sana/vaqt noto'g'ri formatda. PDF tuzilmadi.");
+    if (!items.length) {
+      alert(
+        "Natijalarda vaqt topilmadi. (submittedAt/finishedAt/... yoki answers[].answeredAt kerak)"
+      );
       return;
     }
 
-    // 1) Avval SANAGA ko'ra guruhlaymiz (aralashmasin)
+    // 1) SANAGA ko‘ra guruhlash
     const byDate = items.reduce((acc, r) => {
-      const key = toLocalDateKey(r._dt);
+      const key = dateKey(r._attemptAt);
       (acc[key] ||= []).push(r);
       return acc;
     }, {});
 
-    // 2) Har bir sana ichida 1.5 soat farq bilan SESSIONlarga bo'lamiz
-    const SESSION_GAP_MS = 90 * 60 * 1000;
-    const sessionGroups = []; // har bir element - bitta varaq (page)
+    // 2) Sana ichida 1.5 soatlik tanaffus bo‘lsa, yangi session
+    const GAP = 90 * 60 * 1000; // 90 daqiqa
+    const sessions = []; // har element – alohida PDF varaq
 
     Object.keys(byDate)
-      .sort() // sanalarni ko'tarilish tartibida
-      .forEach((dateKey) => {
-        const list = byDate[dateKey].sort((a, b) => a._dt - b._dt);
+      .sort()
+      .forEach((dkey) => {
+        const arr = byDate[dkey].sort((a, b) => a._attemptAt - b._attemptAt);
         let current = [];
-
-        for (let i = 0; i < list.length; i++) {
-          const item = list[i];
-          if (current.length === 0) {
-            current.push(item);
+        for (let i = 0; i < arr.length; i++) {
+          const cur = arr[i];
+          if (!current.length) {
+            current.push(cur);
             continue;
           }
           const prev = current[current.length - 1];
-          const gapTooLarge = item._dt - prev._dt > SESSION_GAP_MS;
-
-          // Sana almashsa yoki 1.5 soatdan katta tanaffus bo'lsa -> yangi varaq
-          const dateChanged =
-            toLocalDateKey(item._dt) !== toLocalDateKey(prev._dt);
-
-          if (dateChanged || gapTooLarge) {
-            sessionGroups.push(current);
-            current = [item];
+          if (cur._attemptAt - prev._attemptAt > GAP) {
+            sessions.push(current);
+            current = [cur];
           } else {
-            current.push(item);
+            current.push(cur);
           }
         }
-        if (current.length) sessionGroups.push(current);
+        if (current.length) sessions.push(current);
       });
 
-    // 3) PDF yaratish
+    // --- PDF yaratish ---
     const doc = new jsPDF();
 
-    sessionGroups.forEach((group, idx) => {
+    sessions.forEach((group, idx) => {
       if (idx !== 0) doc.addPage();
 
       // Sarlavha
@@ -159,15 +194,14 @@ const handleDownloadPDF = async () => {
       doc.setTextColor(40, 60, 120);
       doc.text("📊 Foydalanuvchi Natijalari", 105, 15, { align: "center" });
 
-      const first = group[0]._dt;
-      const last = group[group.length - 1]._dt;
+      const first = group[0]._attemptAt;
+      const last = group[group.length - 1]._attemptAt;
 
       const dateLabel = first.toLocaleDateString("uz-UZ", {
         year: "numeric",
         month: "2-digit",
         day: "2-digit",
       });
-
       const timeWindow = `${first.toLocaleTimeString("uz-UZ", {
         hour: "2-digit",
         minute: "2-digit",
@@ -188,8 +222,8 @@ const handleDownloadPDF = async () => {
           r.username,
           String(r.correctAnswers ?? ""),
           String(r.totalQuestions ?? ""),
-          (r.scorePercentage != null ? `${r.scorePercentage}%` : ""),
-          r._dt.toLocaleTimeString("uz-UZ", {
+          r.scorePercentage != null ? `${r.scorePercentage}%` : "",
+          r._attemptAt.toLocaleTimeString("uz-UZ", {
             hour: "2-digit",
             minute: "2-digit",
           }),
