@@ -123,17 +123,17 @@ const GroupedQuestions = ({ subjectId }) => {
         // Savol matnini avtomatik bo‘lish
         doc.setFontSize(13);
         doc.setTextColor(0, 0, 0);
-      
+
         const questionText = `${index + 1}. ${q.question_text}`;
-        const splitText = doc.splitTextToSize(questionText, 180); // 180px kenglik bo‘yicha bo‘linadi
+        const splitText = doc.splitTextToSize(questionText, 180);
         doc.text(splitText, 10, y);
-        y += splitText.length * 7; // qancha qator bo‘lsa, shuncha pastga tushiramiz
-      
+        y += splitText.length * 7;
+
         // Variantlarni jadvalga tayyorlash
         const rows = q.options.map((opt) => [
           opt.option_text + (opt.is_correct ? "  ✓" : "")
         ]);
-      
+
         autoTable.default(doc, {
           startY: y,
           body: rows,
@@ -149,20 +149,9 @@ const GroupedQuestions = ({ subjectId }) => {
             }
           }
         });
-      
-        y = doc.lastAutoTable.finalY + 10;
-      
-        if (y > 260) {
-          doc.addPage();
-          y = 20;
-        }
-      });
-      
-        });
 
         y = doc.lastAutoTable.finalY + 10;
 
-        // Agar joy tugasa yangi sahifa
         if (y > 260) {
           doc.addPage();
           y = 20;
