@@ -113,7 +113,7 @@ export default function Admin() {
   };
 
   return (
-    <div className="flex -ml-5 flex-col h-screen bg-gray-100">
+    <div className="flex flex-col h-screen bg-gray-100 overflow-hidden">
       <Head>
         <title>Admin Paneli</title>
         <meta name="description" content="Savollar va variantlar qo‘shish" />
@@ -123,8 +123,8 @@ export default function Admin() {
         <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
       </div>
 
-      <div className="flex flex-1 pt-16">
-        <div className={`bg-gray-900 text-white fixed h-full p-5 top-16 transition-all duration-300 ${isOpen ? "w-64" : "w-20"}`}>
+      <div className="flex flex-1 pt-16 overflow-hidden">
+        <div className={`bg-gray-900 text-white fixed h-full p-5 top-16 transition-all duration-300 ${isOpen ? "w-64" : "w-20"} z-40`}>
           <button className="text-white mb-6" onClick={() => setIsOpen(!isOpen)}>
             <Menu size={24} />
           </button>
@@ -138,9 +138,6 @@ export default function Admin() {
             <li className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer" onClick={handleResultsClick}>
               <BarChart size={24} /> {isOpen && "Hisobotlar"}
             </li>
-            {/* <li className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer">
-              <Settings size={24} /> {isOpen && "Sozlamalar"}
-            </li> */}
             <br /><br />
             {isLoggedIn && (
               <li className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer" onClick={handleLogout}>
@@ -150,7 +147,7 @@ export default function Admin() {
           </ul>
         </div>
 
-        <div className={`min-h-screen flex flex-col items-center py-8 flex-1 transition-all duration-300 ${isOpen ? "ml-64" : "ml-20"}`}>
+        <div className={`flex-1 flex flex-col items-center py-8 transition-all duration-300 ${isOpen ? "ml-64" : "ml-20"} mr-0`}>
           <h1 className="text-3xl font-bold text-gray-800 mb-8">Savollar Qo‘shish</h1>
           <button onClick={addQuestion} className="mb-6 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
             Savol yaratish
