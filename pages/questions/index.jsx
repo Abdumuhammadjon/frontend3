@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from "next/router";
@@ -113,7 +114,7 @@ export default function Admin() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100 overflow-hidden">
+    <div className="flex flex-col min-h-screen bg-gray-100 overflow-hidden">
       <Head>
         <title>Admin Paneli</title>
         <meta name="description" content="Savollar va variantlar qo‘shish" />
@@ -147,12 +148,12 @@ export default function Admin() {
           </ul>
         </div>
 
-        <div className={`flex-1 flex flex-col items-center py-8 transition-all duration-300 ${isOpen ? "ml-64" : "ml-20"} mr-0`}>
+        <div className={`flex-1 flex flex-col items-center py-8 h-full transition-all duration-300 ${isOpen ? "ml-64" : "ml-20"} mr-0 overflow-auto`}>
           <h1 className="text-3xl font-bold text-gray-800 mb-8">Savollar Qo‘shish</h1>
           <button onClick={addQuestion} className="mb-6 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
             Savol yaratish
           </button>
-          <div className="w-full max-w-3xl space-y-8">
+          <div className="w-full max-w-3xl space-y-8 flex-1 overflow-auto">
             {questions.map((question, qIndex) => (
               <div key={qIndex} className="bg-white p-6 rounded-lg shadow-md relative">
                 <textarea
@@ -197,3 +198,21 @@ export default function Admin() {
     </div>
   );
 }
+```
+
+### Qo'shimcha CSS (iste'mol uchun):
+Agar muammo barqaror ravishda hal bo'lmasa, quyidagi CSSni loyihaingizga qo'shing:
+```css
+@media (max-width: 640px) {
+  .content-area {
+    height: calc(100vh - 64px);
+    overflow: hidden;
+    margin-left: 0 !important;
+  }
+  .sidebar {
+    width: 0 !important;
+    display: none;
+  }
+}
+
+
