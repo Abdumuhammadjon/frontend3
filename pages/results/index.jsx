@@ -101,7 +101,6 @@ const GroupedQuestions = ({ subjectId }) => {
     });
   };
 
-  // 📥 Sana bo‘yicha PDF yuklab olish (jadval dizayn bilan)
   const handleDownloadPDFByDate = (date) => {
     const questions = groupedQuestions[date];
     if (!questions || questions.length === 0) return;
@@ -112,7 +111,6 @@ const GroupedQuestions = ({ subjectId }) => {
     ]).then(([{ jsPDF }, autoTable]) => {
       const doc = new jsPDF();
 
-      // Sarlavha
       doc.setFontSize(18);
       doc.setTextColor(40, 60, 120);
       doc.text(`📘 Savollar to'plami (${formatDate(date)})`, 105, 15, { align: "center" });
@@ -120,7 +118,6 @@ const GroupedQuestions = ({ subjectId }) => {
       let y = 30;
 
       questions.forEach((q, index) => {
-        // Savol matnini avtomatik bo‘lish
         doc.setFontSize(13);
         doc.setTextColor(0, 0, 0);
 
@@ -129,7 +126,6 @@ const GroupedQuestions = ({ subjectId }) => {
         doc.text(splitText, 10, y);
         y += splitText.length * 7;
 
-        // Variantlarni jadvalga tayyorlash
         const rows = q.options.map((opt) => [
           opt.option_text + (opt.is_correct ? "  ✓" : "")
         ]);
@@ -158,7 +154,6 @@ const GroupedQuestions = ({ subjectId }) => {
         }
       });
 
-      // Footer (sahifa raqamlari)
       const pageCount = doc.internal.getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
@@ -172,16 +167,15 @@ const GroupedQuestions = ({ subjectId }) => {
   };
 
   return (
-    <div className="flex flex-col  h-screen bg-gray-100 overflow-hidden">
+    <div className="flex flex-col min-h-screen bg-gray-100">
       {/* Navbar */}
       <div className="bg-white shadow-md h-16 flex items-center px-6 fixed w-full z-50 top-0">
         <h1 className="text-2xl font-bold text-gray-800">Savollar Bazasi</h1>
       </div>
-   
 
       <div className="flex flex-1 pt-16">
         {/* Sidebar */}
-        <div className={`bg-gray-900 text-white fixed h-full p-5 top-16 transition-all duration-300 ${isSidebarOpen ? "w-64" : "w-20"}`}>
+        <div className={`bg-gray-900 text-white fixed h-[calc(100vh-4rem)] p-5 top-16 transition-all duration-300 ${isSidebarOpen ? "w-64" : "w-20"} z-40`}>
           <button className="text-white mb-6" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
             <Menu size={24} />
           </button>
@@ -208,7 +202,7 @@ const GroupedQuestions = ({ subjectId }) => {
         </div>
 
         {/* Main Content */}
-        <div className={`flex-1 p-6 transition-all duration-300 ${isSidebarOpen ? "ml-64" : "ml-20"}`}>
+        <div className={`flex-1 p-6 transition-all duration-300 ${isSidebarOpen ? "ml-64" : "ml-20"} overflow-y-auto`}>
           {loading ? (
             <div className="flex justify-center items-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -218,7 +212,7 @@ const GroupedQuestions = ({ subjectId }) => {
               Xatolik: {error}
             </div>
           ) : (
-            <div className="max-w-4xl mx-auto space-y-6">
+            <div className="max-w-4xl mx-auto space-y-6 max-h-[calc(100vh-16rem)] overflow-y-auto -webkit-overflow-scrolling-touch">
               {Object.keys(groupedQuestions).sort().map((date) => (
                 <div key={date} className="mb-4 w-full">
                   <button
@@ -229,7 +223,6 @@ const GroupedQuestions = ({ subjectId }) => {
                   </button>
                   {selectedDate === date && (
                     <div className="mt-2 p-4 bg-white rounded-lg shadow-md">
-                      {/* 📄 Shu sanaga tegishli PDF tugmasi */}
                       <button
                         onClick={() => handleDownloadPDFByDate(date)}
                         className="mb-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-md hover:bg-green-600 transition-colors duration-200"
