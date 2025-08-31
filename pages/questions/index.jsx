@@ -198,11 +198,11 @@ export default function Admin() {
     </div>
   );
 }
-```
+
 
 ### Qo'shimcha CSS (iste'mol uchun):
 Agar muammo barqaror ravishda hal bo'lmasa, quyidagi CSSni loyihaingizga qo'shing:
-```css
+
 @media (max-width: 640px) {
   .content-area {
     height: calc(100vh - 64px);
