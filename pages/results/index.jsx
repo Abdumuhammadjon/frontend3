@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
-import { useRouter } from "next/router";
-import { Menu, Home, Users, BarChart, Settings, LogOut, Trash2 } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { useRouter } from 'next/router';
+import { Menu, Home, Users, BarChart, Settings, LogOut, Trash2 } from 'lucide-react';
 
 const GroupedQuestions = ({ subjectId }) => {
   const [groupedQuestions, setGroupedQuestions] = useState({});
   const [selectedDate, setSelectedDate] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const router = useRouter();
@@ -18,7 +18,7 @@ const GroupedQuestions = ({ subjectId }) => {
     const idToUse = subjectId || storedSubjectId;
 
     if (!idToUse) {
-      router.push("/Login");
+      router.push('/Login');
     } else {
       setIsLoggedIn(true);
       fetchQuestions(idToUse);
@@ -28,14 +28,15 @@ const GroupedQuestions = ({ subjectId }) => {
   const fetchQuestions = async (idToUse) => {
     setLoading(true);
     try {
-      const { data } = await axios.get(
-        `https://backed1.onrender.com/api/subject/${idToUse}`,
-        { headers: { "Content-Type": "application/json" } }
-      );
+      const response = await axios.get(`https://backed1.onrender.com/api/subject/${idToUse}`, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = response.data;
 
-      const grouped = data.reduce((acc, q) => {
-        const date = new Date(q.created_at).toISOString().split("T")[0];
-        (acc[date] ||= []).push(q);
+      const grouped = data.reduce((acc, question) => {
+        const date = new Date(question.created_at).toISOString().split('T')[0];
+        if (!acc[date]) acc[date] = [];
+        acc[date].push(question);
         return acc;
       }, {});
 
@@ -50,161 +51,229 @@ const GroupedQuestions = ({ subjectId }) => {
 
   const handleDeleteQuestion = async (questionId, date) => {
     if (!window.confirm("Bu savolni o'chirishni xohlaysizmi?")) return;
+
     try {
-      await axios.delete(`https://backed1.onrender.com/api/question/${questionId}`);
-      setGroupedQuestions((prev) => {
-        const copy = { ...prev };
-        copy[date] = copy[date].filter((q) => q.id !== questionId);
-        if (!copy[date].length) delete copy[date];
-        return copy;
+      await axios.delete(`https://backed1.onrender.com/api/question/${questionId}`, {
+        headers: { 'Content-Type': 'application/json' },
       });
+
+      setGroupedQuestions((prev) => {
+        const updated = { ...prev };
+        updated[date] = updated[date].filter((q) => q.id !== questionId);
+        if (updated[date].length === 0) delete updated[date];
+        return updated;
+      });
+      setError(null);
     } catch (err) {
       setError(err.response?.data?.error || "Savolni o'chirishda xatolik");
     }
   };
 
-  const handleSubjectClick = () => router.push("/questions");
-  const handleResultClick = () => router.push("/results");
-  const handleUserResultsClick = () => router.push("/UserResults");
+  const handleSubjectClick = () => {
+    router.push("/questions");
+  };
+
+  const handleResultClick = () => {
+    router.push("/results");
+  };
+
+  const handleUserResultsClick = () => {
+    router.push("/UserResults");
+  };
 
   const handleLogout = () => {
-    document.cookie.split(";").forEach((c) => {
-      const name = c.split("=")[0].trim();
-      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+    document.cookie.split(";").forEach(function(cookie) {
+      const name = cookie.split("=")[0].trim();
+      document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
     });
+
     localStorage.clear();
     sessionStorage.clear();
     setIsLoggedIn(false);
-    router.push("/Login");
+    router.push('/Login');
   };
 
-  const formatDate = (dateStr) =>
-    new Date(dateStr).toLocaleDateString("uz-UZ", { year: "numeric", month: "long", day: "numeric" });
+  const formatDate = (dateStr) => {
+    return new Date(dateStr).toLocaleDateString('uz-UZ', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
+  // 📥 Sana bo‘yicha PDF yuklab olish (jadval dizayn bilan)
+  const handleDownloadPDFByDate = (date) => {
+    const questions = groupedQuestions[date];
+    if (!questions || questions.length === 0) return;
+
+    Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable")
+    ]).then(([{ jsPDF }, autoTable]) => {
+      const doc = new jsPDF();
+
+      // Sarlavha
+      doc.setFontSize(18);
+      doc.setTextColor(40, 60, 120);
+      doc.text(`📘 Savollar to'plami (${formatDate(date)})`, 105, 15, { align: "center" });
+
+      let y = 30;
+
+      questions.forEach((q, index) => {
+        // Savol matnini avtomatik bo‘lish
+        doc.setFontSize(13);
+        doc.setTextColor(0, 0, 0);
+
+        const questionText = `${index + 1}. ${q.question_text}`;
+        const splitText = doc.splitTextToSize(questionText, 180);
+        doc.text(splitText, 10, y);
+        y += splitText.length * 7;
+
+        // Variantlarni jadvalga tayyorlash
+        const rows = q.options.map((opt) => [
+          opt.option_text + (opt.is_correct ? "  ✓" : "")
+        ]);
+
+        autoTable.default(doc, {
+          startY: y,
+          body: rows,
+          styles: { fontSize: 11, halign: "left" },
+          theme: "grid",
+          didParseCell: (data) => {
+            if (data.section === "body") {
+              const r = data.row.index;
+              if (q.options[r]?.is_correct) {
+                data.cell.styles.fillColor = [220, 255, 220];
+                data.cell.styles.textColor = [0, 100, 0];
+              }
+            }
+          }
+        });
+
+        y = doc.lastAutoTable.finalY + 10;
+
+        if (y > 260) {
+          doc.addPage();
+          y = 20;
+        }
+      });
+
+      // Footer (sahifa raqamlari)
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Sahifa ${i} / ${pageCount}`, 200, 290, { align: "right" });
+      }
+
+      doc.save(`savollar-${date}.pdf`);
+    });
+  };
 
   return (
-    <div className="h-screen bg-gray-100">
-      {/* ====== HEADER (BUTUN EKRAN BO'YLAB) ====== */}
-      <header className="fixed inset-x-0 top-0 z-50 h-16 bg-white shadow">
-        <div
-          className={`h-full flex items-center justify-between px-4 sm:px-6 
-          ${isSidebarOpen ? "md:pl-64" : "md:pl-20"} md:pr-4`}
-        >
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Savollar Bazasi</h1>
-          <div className="flex items-center gap-3">
-            {isLoggedIn && (
-              <button
-                onClick={handleLogout}
-                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm flex items-center gap-1"
-              >
-                <LogOut size={16} /> Chiqish
-              </button>
-            )}
-            <div className="w-9 h-9 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold">SB</div>
-          </div>
-        </div>
-      </header>
+    <div className="flex flex-col -ml-5 h-screen bg-gray-100">
+      {/* Navbar */}
+      <div className="bg-white shadow-md h-16 flex items-center px-6 fixed w-full z-50 top-0">
+        <h1 className="text-2xl font-bold text-gray-800">Savollar Bazasi</h1>
+      </div>
 
-      {/* ====== SIDEBAR (HEADER OSTIDA) ====== */}
-      <aside
-        className={`fixed top-16 left-0 h-[calc(100vh-4rem)] bg-gray-900 text-white transition-all duration-300 
-        ${isSidebarOpen ? "w-64" : "w-20"} overflow-y-auto`}
-      >
-        <div className="flex items-center justify-between px-4 h-14 border-b border-gray-700">
-          <span className={`font-bold ${!isSidebarOpen && "hidden"}`}>Menyu</span>
-          <button onClick={() => setIsSidebarOpen((s) => !s)} className="text-white">
-            <Menu size={22} />
+      <div className="flex flex-1 pt-16">
+        {/* Sidebar */}
+        <div className={`bg-gray-900 text-white fixed h-full p-5 top-16 transition-all duration-300 ${isSidebarOpen ? "w-64" : "w-20"}`}>
+          <button className="text-white mb-6" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
+            <Menu size={24} />
           </button>
+          <ul className="space-y-4">
+            <li className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer" onClick={handleSubjectClick}>
+              <Home size={24} /> {isSidebarOpen && "Bosh sahifa"}
+            </li>
+            <li className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer" onClick={handleResultClick}>
+              <Users size={24} /> {isSidebarOpen && "Foydalanuvchilar"}
+            </li>
+            <li className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer" onClick={handleUserResultsClick}>
+              <BarChart size={24} /> {isSidebarOpen && "Hisobotlar"}
+            </li>
+            <li className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer">
+              <Settings size={24} /> {isSidebarOpen && "Sozlamalar"}
+            </li>
+            <br /><br />
+            {isLoggedIn && (
+              <li className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer" onClick={handleLogout}>
+                <LogOut size={24} /> {isSidebarOpen && "Chiqish"}
+              </li>
+            )}
+          </ul>
         </div>
 
-        <ul className="p-4 space-y-3">
-          <li onClick={handleSubjectClick} className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer">
-            <Home size={22} /> {isSidebarOpen && "Bosh sahifa"}
-          </li>
-          <li onClick={handleResultClick} className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer">
-            <Users size={22} /> {isSidebarOpen && "Foydalanuvchilar"}
-          </li>
-          <li onClick={handleUserResultsClick} className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer">
-            <BarChart size={22} /> {isSidebarOpen && "Hisobotlar"}
-          </li>
-          <li className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer">
-            <Settings size={22} /> {isSidebarOpen && "Sozlamalar"}
-          </li>
-          {isLoggedIn && (
-            <li onClick={handleLogout} className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer text-red-400">
-              <LogOut size={22} /> {isSidebarOpen && "Chiqish"}
-            </li>
-          )}
-        </ul>
-      </aside>
-
-      {/* ====== MAIN CONTENT ====== */}
-      <main
-        className={`
-          pt-16  /* header balandligi */
-          ${isSidebarOpen ? "md:ml-64" : "md:ml-20"}  /* desktopda sidebar joyi */
-          ml-0  /* mobilda to'liq kenglik */
-        `}
-      >
-        <div className="p-4 sm:p-6">
+        {/* Main Content */}
+        <div className={`flex-1 p-6 transition-all duration-300 ${isSidebarOpen ? "ml-64" : "ml-20"}`}>
           {loading ? (
             <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500" />
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
             </div>
           ) : error ? (
-            <div className="text-center p-4 text-red-600 bg-red-100 rounded-lg shadow">Xatolik: {error}</div>
+            <div className="text-center p-4 text-red-600 bg-red-100 rounded-lg shadow-md">
+              Xatolik: {error}
+            </div>
           ) : (
             <div className="max-w-4xl mx-auto space-y-6">
-              {Object.keys(groupedQuestions)
-                .sort()
-                .map((date) => (
-                  <div key={date} className="mb-4 w-full">
-                    <button
-                      onClick={() => setSelectedDate(selectedDate === date ? null : date)}
-                      className="w-full bg-blue-500 text-white px-6 py-3 rounded-lg shadow hover:bg-blue-600 transition"
-                    >
-                      {formatDate(date)}
-                    </button>
+              {Object.keys(groupedQuestions).sort().map((date) => (
+                <div key={date} className="mb-4 w-full">
+                  <button
+                    onClick={() => setSelectedDate(selectedDate === date ? null : date)}
+                    className="w-full bg-blue-500 text-white px-6 py-3 rounded-lg shadow-md hover:bg-blue-600 transition-colors duration-200"
+                  >
+                    {formatDate(date)}
+                  </button>
+                  {selectedDate === date && (
+                    <div className="mt-2 p-4 bg-white rounded-lg shadow-md">
+                      {/* 📄 Shu sanaga tegishli PDF tugmasi */}
+                      <button
+                        onClick={() => handleDownloadPDFByDate(date)}
+                        className="mb-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-md hover:bg-green-600 transition-colors duration-200"
+                      >
+                        📄 Ushbu to‘plamni PDF’da yuklab olish
+                      </button>
 
-                    {selectedDate === date && (
-                      <div className="mt-2 p-4 bg-white rounded-lg shadow">
-                        {groupedQuestions[date].map((q, i) => (
-                          <div key={i} className="mb-4 border-b pb-2 last:border-b-0">
-                            <div className="flex justify-between items-center mb-2">
-                              <p className="text-gray-600 font-medium">Savol:</p>
-                              <button
-                                onClick={() => handleDeleteQuestion(q.id, date)}
-                                className="text-red-600 hover:text-red-800"
-                                title="Savolni o'chirish"
-                              >
-                                <Trash2 size={20} />
-                              </button>
-                            </div>
-                            <div className="p-3 bg-gray-50 rounded-lg">
-                              <p className="font-bold text-gray-900">{q.question_text}</p>
-                              <ul className="mt-2 space-y-2">
-                                {q.options.map((opt) => (
-                                  <li
-                                    key={opt.id}
-                                    className={`p-2 rounded-lg ${
-                                      opt.is_correct ? "bg-green-100 text-green-800" : "bg-gray-200 text-gray-800"
-                                    }`}
-                                  >
-                                    {opt.option_text}
-                                    {opt.is_correct && <span className="ml-2 text-green-600 font-medium">✓</span>}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
+                      {groupedQuestions[date].map((question, index) => (
+                        <div key={index} className="mb-4 border-b pb-2 last:border-b-0">
+                          <div className="flex justify-between items-center mb-2">
+                            <p className="text-gray-600 font-medium">Savol:</p>
+                            <button
+                              onClick={() => handleDeleteQuestion(question.id, date)}
+                              className="text-red-600 hover:text-red-800 transition-colors duration-200"
+                              title="Savolni o'chirish"
+                            >
+                              <Trash2 size={20} />
+                            </button>
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                          <div className="p-3 bg-gray-50 rounded-lg">
+                            <p className="font-bold text-gray-900">{question.question_text}</p>
+                            <ul className="mt-2 space-y-2">
+                              {question.options.map((option) => (
+                                <li
+                                  key={option.id}
+                                  className={`p-2 rounded-lg ${option.is_correct ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-800'}`}
+                                >
+                                  {option.option_text}
+                                  {option.is_correct && (
+                                    <span className="ml-2 text-green-600 font-medium">✓</span>
+                                  )}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </div>
-      </main>
+      </div>
     </div>
   );
 };
