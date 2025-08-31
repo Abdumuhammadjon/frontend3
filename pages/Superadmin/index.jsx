@@ -49,7 +49,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex flex-col -ml-5 h-screen bg-gray-100">
+    <div className="flex flex-col overflow-hidden h-screen bg-gray-100">
       <div className="bg-white shadow-md h-16 flex items-center px-6 fixed w-full z-10 top-0">
         <h1 className="text-2xl font-bold text-gray-800">Navbar</h1>
       </div>
