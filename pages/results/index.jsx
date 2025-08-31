@@ -101,7 +101,6 @@ const GroupedQuestions = ({ subjectId }) => {
     });
   };
 
-  // 📥 Sana bo‘yicha PDF yuklab olish (jadval dizayn bilan)
   const handleDownloadPDFByDate = (date) => {
     const questions = groupedQuestions[date];
     if (!questions || questions.length === 0) return;
@@ -112,7 +111,6 @@ const GroupedQuestions = ({ subjectId }) => {
     ]).then(([{ jsPDF }, autoTable]) => {
       const doc = new jsPDF();
 
-      // Sarlavha
       doc.setFontSize(18);
       doc.setTextColor(40, 60, 120);
       doc.text(`📘 Savollar to'plami (${formatDate(date)})`, 105, 15, { align: "center" });
@@ -120,7 +118,6 @@ const GroupedQuestions = ({ subjectId }) => {
       let y = 30;
 
       questions.forEach((q, index) => {
-        // Savol matnini avtomatik bo‘lish
         doc.setFontSize(13);
         doc.setTextColor(0, 0, 0);
 
@@ -129,7 +126,6 @@ const GroupedQuestions = ({ subjectId }) => {
         doc.text(splitText, 10, y);
         y += splitText.length * 7;
 
-        // Variantlarni jadvalga tayyorlash
         const rows = q.options.map((opt) => [
           opt.option_text + (opt.is_correct ? "  ✓" : "")
         ]);
@@ -158,7 +154,6 @@ const GroupedQuestions = ({ subjectId }) => {
         }
       });
 
-      // Footer (sahifa raqamlari)
       const pageCount = doc.internal.getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
@@ -172,10 +167,12 @@ const GroupedQuestions = ({ subjectId }) => {
   };
 
   return (
-    <div className="flex flex-col -ml-5 h-screen bg-gray-100">
+    <div className="flex flex-col h-screen bg-gray-100">
       {/* Navbar */}
-      <div className="bg-white shadow-md h-16 flex items-center px-6 fixed w-full z-50 top-0">
-        <h1 className="text-2xl font-bold text-gray-800">Savollar Bazasi</h1>
+      <div className="bg-white shadow-md h-16 flex items-center fixed top-0 left-0 right-0 z-50">
+        <div className="container mx-auto flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-gray-800">Savollar Bazasi</h1>
+        </div>
       </div>
 
       <div className="flex flex-1 pt-16">
@@ -228,7 +225,6 @@ const GroupedQuestions = ({ subjectId }) => {
                   </button>
                   {selectedDate === date && (
                     <div className="mt-2 p-4 bg-white rounded-lg shadow-md">
-                      {/* 📄 Shu sanaga tegishli PDF tugmasi */}
                       <button
                         onClick={() => handleDownloadPDFByDate(date)}
                         className="mb-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-md hover:bg-green-600 transition-colors duration-200"
