@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/router';
 import { Menu, Home, Users, BarChart, Settings, LogOut, Trash2 } from 'lucide-react';
@@ -10,6 +10,7 @@ const GroupedQuestions = ({ subjectId }) => {
   const [error, setError] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const contentRef = useRef(null); // Kontent maydoni uchun ref
 
   const router = useRouter();
 
@@ -24,6 +25,13 @@ const GroupedQuestions = ({ subjectId }) => {
       fetchQuestions(idToUse);
     }
   }, [subjectId, router]);
+
+  // Scrollni majburlash uchun useEffect
+  useEffect(() => {
+    if (contentRef.current) {
+      contentRef.current.scrollTop = 0; // Har safar yangilanganda yuqoriga scroll qilish
+    }
+  }, [groupedQuestions, selectedDate]);
 
   const fetchQuestions = async (idToUse) => {
     setLoading(true);
@@ -167,7 +175,7 @@ const GroupedQuestions = ({ subjectId }) => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-100">
+    <div className="flex flex-col h-auto bg-gray-100">
       {/* Navbar */}
       <div className="bg-white shadow-md h-16 flex items-center px-6 fixed w-full z-50 top-0">
         <h1 className="text-2xl font-bold text-gray-800">Savollar Bazasi</h1>
@@ -175,7 +183,7 @@ const GroupedQuestions = ({ subjectId }) => {
 
       <div className="flex flex-1 pt-16">
         {/* Sidebar */}
-        <div className={`bg-gray-900 text-white fixed h-[calc(100vh-4rem)] p-5 top-16 transition-all duration-300 ${isSidebarOpen ? "w-64" : "w-20"} z-40`}>
+        <div className={`bg-gray-900 text-white fixed h-[calc(100vh-4rem)] p-5 top-16 transition-all duration-300 ${isSidebarOpen ? "w-64" : "w-20"} z-40 overflow-y-auto`}>
           <button className="text-white mb-6" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
             <Menu size={24} />
           </button>
@@ -202,7 +210,7 @@ const GroupedQuestions = ({ subjectId }) => {
         </div>
 
         {/* Main Content */}
-        <div className={`flex-1 p-6 transition-all duration-300 ${isSidebarOpen ? "ml-64" : "ml-20"} overflow-y-auto`}>
+        <div ref={contentRef} className={`flex-1 p-6 transition-all duration-300 ${isSidebarOpen ? "ml-64" : "ml-20"} overflow-y-auto h-[calc(100vh-4rem)]`}>
           {loading ? (
             <div className="flex justify-center items-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -212,7 +220,7 @@ const GroupedQuestions = ({ subjectId }) => {
               Xatolik: {error}
             </div>
           ) : (
-            <div className="max-w-4xl mx-auto space-y-6 max-h-[calc(100vh-16rem)] overflow-y-auto -webkit-overflow-scrolling-touch">
+            <div className="max-w-4xl mx-auto space-y-6 h-[calc(100vh-16rem)] overflow-y-auto -webkit-overflow-scrolling-touch">
               {Object.keys(groupedQuestions).sort().map((date) => (
                 <div key={date} className="mb-4 w-full">
                   <button
