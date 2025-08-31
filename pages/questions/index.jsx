@@ -112,8 +112,8 @@ export default function Admin() {
     }
   };
 
-  return (
-    <div className="flex flex-col h-screen bg-gray-100 overflow-hidden">
+ return (
+    <div className="flex flex-col min-h-screen bg-gray-100">
       <Head>
         <title>Admin Paneli</title>
         <meta name="description" content="Savollar va variantlar qo‘shish" />
@@ -123,8 +123,8 @@ export default function Admin() {
         <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
       </div>
 
-      <div className="flex flex-1 pt-16 overflow-hidden">
-        <div className={`bg-gray-900 text-white fixed h-full p-5 top-16 transition-all duration-300 ${isOpen ? "w-64" : "w-20"} z-40`}>
+      <div className="flex flex-1 pt-16">
+        <div className={`bg-gray-900 text-white fixed h-[calc(100vh-4rem)] p-5 top-16 transition-all duration-300 ${isOpen ? "w-64" : "w-20"} z-40`}>
           <button className="text-white mb-6" onClick={() => setIsOpen(!isOpen)}>
             <Menu size={24} />
           </button>
@@ -147,12 +147,12 @@ export default function Admin() {
           </ul>
         </div>
 
-        <div className={`flex-1 flex flex-col items-center py-8 transition-all duration-300 ${isOpen ? "ml-64" : "ml-20"} mr-0`}>
+        <div className={`flex-1 flex flex-col items-center py-8 transition-all duration-300 ${isOpen ? "ml-64" : "ml-20"} mr-0 overflow-y-auto`}>
           <h1 className="text-3xl font-bold text-gray-800 mb-8">Savollar Qo‘shish</h1>
           <button onClick={addQuestion} className="mb-6 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
             Savol yaratish
           </button>
-          <div className="w-full max-w-3xl space-y-8">
+          <div className="w-full max-w-3xl space-y-8 max-h-[calc(100vh-16rem)] overflow-y-auto -webkit-overflow-scrolling-touch">
             {questions.map((question, qIndex) => (
               <div key={qIndex} className="bg-white p-6 rounded-lg shadow-md relative">
                 <textarea
