@@ -108,10 +108,8 @@ const GroupedQuestions = ({ subjectId }) => {
     });
   };
 
-  // ✅ To‘g‘rilangan PDF yuklash funksiyasi
-  
-
-    const handleDownloadPDFByDate = (date) => {
+// 📌 PDF Yuklab olish
+const handleDownloadPDFByDate = (date) => {
   const questions = groupedQuestions[date];
   if (!questions || questions.length === 0) return;
 
@@ -124,7 +122,7 @@ const GroupedQuestions = ({ subjectId }) => {
     const margin = 15;
     let y = margin + 10;
 
-    // Sarlavha
+    // 📌 Sarlavha
     doc.setFontSize(16);
     doc.setTextColor(40, 60, 120);
     doc.text(`📘 Savollar to'plami (${formatDate(date)})`, 105, margin, { align: "center" });
@@ -134,12 +132,11 @@ const GroupedQuestions = ({ subjectId }) => {
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
 
-      // Savol matni -> splitTextToSize bilan bo‘linadi
+      // 📌 Savol matnini sig‘dirish
       const questionText = `${index + 1}. ${q.question_text}`;
-      const splitText = doc.splitTextToSize(questionText, 170); // 170mm kenglikka moslash
+      const splitText = doc.splitTextToSize(questionText, 170);
       const neededHeight = splitText.length * 6;
 
-      // Sahifadan chiqib ketmasligi uchun tekshirish
       if (y + neededHeight > pageHeight - margin) {
         doc.addPage();
         y = margin;
@@ -148,7 +145,7 @@ const GroupedQuestions = ({ subjectId }) => {
       doc.text(splitText, margin, y);
       y += neededHeight + 3;
 
-      // Javob variantlari jadvali
+      // 📌 Javob variantlari
       const rows = q.options.map((opt) => [
         opt.option_text + (opt.is_correct ? "  ✓" : "")
       ]);
@@ -167,7 +164,7 @@ const GroupedQuestions = ({ subjectId }) => {
       }
     });
 
-    // Footer
+    // 📌 Footer (sahifa raqamlari)
     const pageCount = doc.internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
@@ -180,8 +177,10 @@ const GroupedQuestions = ({ subjectId }) => {
   });
 };
 
+    
 
-  
+    // Footer
+
 
       // Footer
       const pageCount = doc.internal.getNumberOfPages();
