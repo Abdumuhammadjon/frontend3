@@ -10,22 +10,20 @@ export default function Admin() {
   const [subjectId, setSubjectId] = useState(null);
   const [adminId, setAdminId] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // 🔥 Loader holati
   const router = useRouter();
 
   useEffect(() => {
     const storedAdminId = localStorage.getItem("adminId");
     const storedSubjectId = localStorage.getItem("subjectId");
     
-    console.log("Admin ID:", storedAdminId);
-    console.log("Subject ID:", storedSubjectId);
-    
     if (!storedAdminId || !storedSubjectId) {
       alert("Subject ID yoki Admin ID yo‘q!");
-      router.push('/Login'); // Agar ma'lumot yo'q bo'lsa, login sahifasiga yo'naltirish
+      router.push('/Login');
     } else {
       setSubjectId(storedSubjectId);
       setAdminId(storedAdminId);
-      setIsLoggedIn(true); // Foydalanuvchi login qilgan deb hisoblaymiz
+      setIsLoggedIn(true);
     }
   }, [router]);
 
@@ -42,10 +40,9 @@ export default function Admin() {
       const name = cookie.split("=")[0].trim();
       document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
     });
-
     localStorage.clear();
     sessionStorage.clear();
-    setIsLoggedIn(false); // Logout holatini yangilash
+    setIsLoggedIn(false);
     router.push('/Login');
   };
 
@@ -98,6 +95,7 @@ export default function Admin() {
       return;
     }
     try {
+      setIsLoading(true); // 🔥 Loaderni yoqish
       const response = await axios.post('https://backed1.onrender.com/api/question', {
         subjectId,
         adminId,
@@ -109,6 +107,8 @@ export default function Admin() {
       setQuestions([]);
     } catch (error) {
       alert(error.response?.data?.message || 'Server bilan bog‘lanishda xatolik!');
+    } finally {
+      setIsLoading(false); // 🔥 Loaderni o‘chirish
     }
   };
 
@@ -118,6 +118,13 @@ export default function Admin() {
         <title>Admin Paneli</title>
         <meta name="description" content="Savollar va variantlar qo‘shish" />
       </Head>
+
+      {/* 🔥 Loader Overlay */}
+      {isLoading && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[9999]">
+          <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      )}
 
       <div className="bg-white shadow-md h-16 flex items-center px-6 fixed w-full z-50 top-0">
         <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
@@ -189,8 +196,8 @@ export default function Admin() {
               </div>
             ))}
           </div>
-          <button onClick={saveQuestions} className="mt-6 px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600">
-            Saqlash
+          <button onClick={saveQuestions} disabled={isLoading} className="mt-6 px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50">
+            {isLoading ? "Saqlanmoqda..." : "Saqlash"}
           </button>
         </div>
       </div>
