@@ -108,62 +108,89 @@ const GroupedQuestions = ({ subjectId }) => {
     });
   };
 
-  // ✅ To‘g‘rilangan funksiya
-  const handleDownloadPDFByDate = (date) => {
-    const questions = groupedQuestions[date];
-    if (!questions || questions.length === 0) return;
+ const handleDownloadPDFByDate = (date) => {
+  const questions = groupedQuestions[date];
+  if (!questions || questions.length === 0) return;
 
-    Promise.all([
-      import("jspdf"),
-      import("jspdf-autotable")
-    ]).then(([{ jsPDF }, autoTable]) => {
-      const doc = new jsPDF({ unit: "mm", format: "a4" });
+  Promise.all([
+    import("jspdf"),
+    import("jspdf-autotable")
+  ]).then(([{ jsPDF }, autoTable]) => {
+    const doc = new jsPDF({ unit: "mm", format: "a4" });
+    const pageHeight = doc.internal.pageSize.height; // sahifa balandligi
+    const margin = 15; // yuqori/pastki chekka
+    let y = margin + 10;
 
-      doc.setFontSize(18);
-      doc.setTextColor(40, 60, 120);
-      doc.text(`📘 Savollar to'plami (${formatDate(date)})`, 105, 15, { align: "center" });
+    // Sarlavha
+    doc.setFontSize(18);
+    doc.setTextColor(40, 60, 120);
+    doc.text(`📘 Savollar to'plami (${formatDate(date)})`, 105, margin, { align: "center" });
+    y += 10;
 
-      let y = 30;
+    questions.forEach((q, index) => {
+      doc.setFontSize(13);
+      doc.setTextColor(0, 0, 0);
 
-      questions.forEach((q, index) => {
-        doc.setFontSize(13);
-        doc.setTextColor(0, 0, 0);
+      // Savol matni
+      const questionText = `${index + 1}. ${q.question_text}`;
+      const splitText = doc.splitTextToSize(questionText, 180);
+      const neededHeight = splitText.length * 7;
 
-        const questionText = `${index + 1}. ${q.question_text}`;
-        const splitText = doc.splitTextToSize(questionText, 180);
+      // Agar joy qolmasa -> yangi sahifa
+      if (y + neededHeight > pageHeight - margin) {
+        doc.addPage();
+        y = margin;
+      }
 
-        // Agar joy qolmasa, yangi sahifa ochish
-        if (y + splitText.length * 7 > 270) {
-          doc.addPage();
-          y = 20;
-        }
+      doc.text(splitText, margin, y);
+      y += neededHeight + 3;
 
-        doc.text(splitText, 10, y);
-        y += splitText.length * 7;
+      // Javob variantlari
+      const rows = q.options.map((opt) => [
+        opt.option_text + (opt.is_correct ? "  ✓" : "")
+      ]);
 
-        const rows = q.options.map((opt) => [
-          opt.option_text + (opt.is_correct ? "  ✓" : "")
-        ]);
-
-        autoTable.default(doc, {
-          startY: y,
-          body: rows,
-          styles: { fontSize: 11, halign: "left" },
-          theme: "grid",
-          pageBreak: "auto",
-          didParseCell: (data) => {
-            if (data.section === "body") {
-              const r = data.row.index;
-              if (q.options[r]?.is_correct) {
-                data.cell.styles.fillColor = [220, 255, 220];
-                data.cell.styles.textColor = [0, 100, 0];
-              }
+      autoTable.default(doc, {
+        startY: y,
+        body: rows,
+        styles: { fontSize: 11, halign: "left" },
+        theme: "grid",
+        margin: { left: margin, right: margin },
+        pageBreak: "auto", // sahifa bo‘linadi
+        didDrawPage: (data) => {
+          y = data.cursor.y; // jadvaldan keyin y ni yangilash
+        },
+        didParseCell: (data) => {
+          if (data.section === "body") {
+            const r = data.row.index;
+            if (q.options[r]?.is_correct) {
+              data.cell.styles.fillColor = [220, 255, 220];
+              data.cell.styles.textColor = [0, 100, 0];
             }
           }
-        });
-
-        y = doc.lastAutoTable.finalY + 10;
+        }
       });
+
+      // Jadvaldan keyingi pozitsiyani olish
+      if (doc.lastAutoTable?.finalY) {
+        y = doc.lastAutoTable.finalY + 10;
+      }
+    });
+
+    // Footer: sahifa raqamlari
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text(`Sahifa ${i} / ${pageCount}`, 200, pageHeight - 5, { align: "right" });
+    }
+
+    doc.save(`savollar-${date}.pdf`);
+  });
+};
+
+          
 
       const pageCount = doc.internal.getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
