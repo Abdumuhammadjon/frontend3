@@ -10,7 +10,7 @@ const GroupedQuestions = ({ subjectId }) => {
   const [error, setError] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const contentRef = useRef(null); // Kontent maydoni uchun ref
+  const contentRef = useRef(null);
 
   const router = useRouter();
 
@@ -26,10 +26,9 @@ const GroupedQuestions = ({ subjectId }) => {
     }
   }, [subjectId, router]);
 
-  // Scrollni majburlash uchun useEffect
   useEffect(() => {
     if (contentRef.current) {
-      contentRef.current.scrollTop = 0; // Har safar yangilanganda yuqoriga scroll qilish
+      contentRef.current.scrollTop = 0;
     }
   }, [groupedQuestions, selectedDate]);
 
@@ -109,6 +108,7 @@ const GroupedQuestions = ({ subjectId }) => {
     });
   };
 
+  // ✅ To‘g‘rilangan funksiya
   const handleDownloadPDFByDate = (date) => {
     const questions = groupedQuestions[date];
     if (!questions || questions.length === 0) return;
@@ -117,7 +117,7 @@ const GroupedQuestions = ({ subjectId }) => {
       import("jspdf"),
       import("jspdf-autotable")
     ]).then(([{ jsPDF }, autoTable]) => {
-      const doc = new jsPDF();
+      const doc = new jsPDF({ unit: "mm", format: "a4" });
 
       doc.setFontSize(18);
       doc.setTextColor(40, 60, 120);
@@ -131,6 +131,13 @@ const GroupedQuestions = ({ subjectId }) => {
 
         const questionText = `${index + 1}. ${q.question_text}`;
         const splitText = doc.splitTextToSize(questionText, 180);
+
+        // Agar joy qolmasa, yangi sahifa ochish
+        if (y + splitText.length * 7 > 270) {
+          doc.addPage();
+          y = 20;
+        }
+
         doc.text(splitText, 10, y);
         y += splitText.length * 7;
 
@@ -143,6 +150,7 @@ const GroupedQuestions = ({ subjectId }) => {
           body: rows,
           styles: { fontSize: 11, halign: "left" },
           theme: "grid",
+          pageBreak: "auto",
           didParseCell: (data) => {
             if (data.section === "body") {
               const r = data.row.index;
@@ -155,11 +163,6 @@ const GroupedQuestions = ({ subjectId }) => {
         });
 
         y = doc.lastAutoTable.finalY + 10;
-
-        if (y > 260) {
-          doc.addPage();
-          y = 20;
-        }
       });
 
       const pageCount = doc.internal.getNumberOfPages();
