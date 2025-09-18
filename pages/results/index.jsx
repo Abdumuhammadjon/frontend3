@@ -109,72 +109,79 @@ const GroupedQuestions = ({ subjectId }) => {
   };
 
   // ✅ To‘g‘rilangan PDF yuklash funksiyasi
-  const handleDownloadPDFByDate = (date) => {
-    const questions = groupedQuestions[date];
-    if (!questions || questions.length === 0) return;
+  
 
-    Promise.all([
-      import("jspdf"),
-      import("jspdf-autotable")
-    ]).then(([{ jsPDF }, autoTable]) => {
-      const doc = new jsPDF({ unit: "mm", format: "a4" });
-      const pageHeight = doc.internal.pageSize.height;
-      const margin = 15;
-      let y = margin + 10;
+    const handleDownloadPDFByDate = (date) => {
+  const questions = groupedQuestions[date];
+  if (!questions || questions.length === 0) return;
 
-      // Sarlavha
-      doc.setFontSize(18);
-      doc.setTextColor(40, 60, 120);
-      doc.text(`📘 Savollar to'plami (${formatDate(date)})`, 105, margin, { align: "center" });
-      y += 10;
+  Promise.all([
+    import("jspdf"),
+    import("jspdf-autotable")
+  ]).then(([{ jsPDF }, autoTable]) => {
+    const doc = new jsPDF({ unit: "mm", format: "a4" });
+    const pageHeight = doc.internal.pageSize.height;
+    const margin = 15;
+    let y = margin + 10;
 
-      questions.forEach((q, index) => {
-        doc.setFontSize(13);
-        doc.setTextColor(0, 0, 0);
+    // Sarlavha
+    doc.setFontSize(16);
+    doc.setTextColor(40, 60, 120);
+    doc.text(`📘 Savollar to'plami (${formatDate(date)})`, 105, margin, { align: "center" });
+    y += 10;
 
-        // Savol matni
-        const questionText = `${index + 1}. ${q.question_text}`;
-        const splitText = doc.splitTextToSize(questionText, 180);
-        const neededHeight = splitText.length * 7;
+    questions.forEach((q, index) => {
+      doc.setFontSize(12);
+      doc.setTextColor(0, 0, 0);
 
-        if (y + neededHeight > pageHeight - margin) {
-          doc.addPage();
-          y = margin;
-        }
+      // Savol matni -> splitTextToSize bilan bo‘linadi
+      const questionText = `${index + 1}. ${q.question_text}`;
+      const splitText = doc.splitTextToSize(questionText, 170); // 170mm kenglikka moslash
+      const neededHeight = splitText.length * 6;
 
-        doc.text(splitText, margin, y);
-        y += neededHeight + 3;
+      // Sahifadan chiqib ketmasligi uchun tekshirish
+      if (y + neededHeight > pageHeight - margin) {
+        doc.addPage();
+        y = margin;
+      }
 
-        // Variantlar
-        const rows = q.options.map((opt) => [
-          opt.option_text + (opt.is_correct ? "  ✓" : "")
-        ]);
+      doc.text(splitText, margin, y);
+      y += neededHeight + 3;
 
-        autoTable.default(doc, {
-          startY: y,
-          body: rows,
-          styles: { fontSize: 11, halign: "left" },
-          theme: "grid",
-          margin: { left: margin, right: margin },
-          pageBreak: "auto",
-          didDrawPage: (data) => {
-            y = data.cursor.y;
-          },
-          didParseCell: (data) => {
-            if (data.section === "body") {
-              const r = data.row.index;
-              if (q.options[r]?.is_correct) {
-                data.cell.styles.fillColor = [220, 255, 220];
-                data.cell.styles.textColor = [0, 100, 0];
-              }
-            }
-          }
-        });
+      // Javob variantlari jadvali
+      const rows = q.options.map((opt) => [
+        opt.option_text + (opt.is_correct ? "  ✓" : "")
+      ]);
 
-        if (doc.lastAutoTable?.finalY) {
-          y = doc.lastAutoTable.finalY + 10;
-        }
+      autoTable.default(doc, {
+        startY: y,
+        body: rows,
+        styles: { fontSize: 10, halign: "left", cellPadding: 2 },
+        theme: "grid",
+        margin: { left: margin, right: margin },
+        pageBreak: "auto",
       });
+
+      if (doc.lastAutoTable?.finalY) {
+        y = doc.lastAutoTable.finalY + 8;
+      }
+    });
+
+    // Footer
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(9);
+      doc.setTextColor(120);
+      doc.text(`Sahifa ${i} / ${pageCount}`, 200, pageHeight - 5, { align: "right" });
+    }
+
+    doc.save(`savollar-${date}.pdf`);
+  });
+};
+
+
+  
 
       // Footer
       const pageCount = doc.internal.getNumberOfPages();
