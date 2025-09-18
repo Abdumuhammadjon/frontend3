@@ -164,23 +164,8 @@ const handleDownloadPDFByDate = (date) => {
       }
     });
 
-    // 📌 Footer (sahifa raqamlari)
-    const pageCount = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(9);
-      doc.setTextColor(120);
-      doc.text(`Sahifa ${i} / ${pageCount}`, 200, pageHeight - 5, { align: "right" });
-    }
-
-    doc.save(`savollar-${date}.pdf`);
-  });
-};
-
+ 
     
-
-    // Footer
-
 
       // Footer
       const pageCount = doc.internal.getNumberOfPages();
