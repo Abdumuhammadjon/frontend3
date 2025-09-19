@@ -60,6 +60,7 @@ const GroupedQuestions = ({ subjectId }) => {
     if (!window.confirm("Bu savolni o'chirishni xohlaysizmi?")) return;
 
     try {
+      setLoading(true);
       await axios.delete(`https://backed1.onrender.com/api/question/${questionId}`, {
         headers: { 'Content-Type': 'application/json' },
       });
@@ -73,6 +74,8 @@ const GroupedQuestions = ({ subjectId }) => {
       setError(null);
     } catch (err) {
       setError(err.response?.data?.error || "Savolni o'chirishda xatolik");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -108,66 +111,60 @@ const GroupedQuestions = ({ subjectId }) => {
     });
   };
 
-// 📌 PDF Yuklab olish
-const handleDownloadPDFByDate = (date) => {
-  const questions = groupedQuestions[date];
-  if (!questions || questions.length === 0) return;
+  // 📌 PDF Yuklab olish
+  const handleDownloadPDFByDate = (date) => {
+    const questions = groupedQuestions[date];
+    if (!questions || questions.length === 0) return;
 
-  Promise.all([
-    import("jspdf"),
-    import("jspdf-autotable")
-  ]).then(([{ jsPDF }, autoTable]) => {
-    const doc = new jsPDF({ unit: "mm", format: "a4" });
-    const pageHeight = doc.internal.pageSize.height;
-    const margin = 15;
-    let y = margin + 10;
+    Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable")
+    ]).then(([{ jsPDF }, autoTable]) => {
+      const doc = new jsPDF({ unit: "mm", format: "a4" });
+      const pageHeight = doc.internal.pageSize.height;
+      const margin = 15;
+      let y = margin + 10;
 
-    // 📌 Sarlavha
-    doc.setFontSize(16);
-    doc.setTextColor(40, 60, 120);
-    doc.text(`📘 Savollar to'plami (${formatDate(date)})`, 105, margin, { align: "center" });
-    y += 10;
+      // 📌 Sarlavha
+      doc.setFontSize(16);
+      doc.setTextColor(40, 60, 120);
+      doc.text(`📘 Savollar to'plami (${formatDate(date)})`, 105, margin, { align: "center" });
+      y += 10;
 
-    questions.forEach((q, index) => {
-      doc.setFontSize(12);
-      doc.setTextColor(0, 0, 0);
+      questions.forEach((q, index) => {
+        doc.setFontSize(12);
+        doc.setTextColor(0, 0, 0);
 
-      // 📌 Savol matnini sig‘dirish
-      const questionText = `${index + 1}. ${q.question_text}`;
-      const splitText = doc.splitTextToSize(questionText, 170);
-      const neededHeight = splitText.length * 6;
+        const questionText = `${index + 1}. ${q.question_text}`;
+        const splitText = doc.splitTextToSize(questionText, 170);
+        const neededHeight = splitText.length * 6;
 
-      if (y + neededHeight > pageHeight - margin) {
-        doc.addPage();
-        y = margin;
-      }
+        if (y + neededHeight > pageHeight - margin) {
+          doc.addPage();
+          y = margin;
+        }
 
-      doc.text(splitText, margin, y);
-      y += neededHeight + 3;
+        doc.text(splitText, margin, y);
+        y += neededHeight + 3;
 
-      // 📌 Javob variantlari
-      const rows = q.options.map((opt) => [
-        opt.option_text + (opt.is_correct ? "  ✓" : "")
-      ]);
+        const rows = q.options.map((opt) => [
+          opt.option_text + (opt.is_correct ? "  ✓" : "")
+        ]);
 
-      autoTable.default(doc, {
-        startY: y,
-        body: rows,
-        styles: { fontSize: 10, halign: "left", cellPadding: 2 },
-        theme: "grid",
-        margin: { left: margin, right: margin },
-        pageBreak: "auto",
+        autoTable.default(doc, {
+          startY: y,
+          body: rows,
+          styles: { fontSize: 10, halign: "left", cellPadding: 2 },
+          theme: "grid",
+          margin: { left: margin, right: margin },
+          pageBreak: "auto",
+        });
+
+        if (doc.lastAutoTable?.finalY) {
+          y = doc.lastAutoTable.finalY + 8;
+        }
       });
 
-      if (doc.lastAutoTable?.finalY) {
-        y = doc.lastAutoTable.finalY + 8;
-      }
-    });
-
- 
-    
-
-      // Footer
       const pageCount = doc.internal.getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
@@ -182,6 +179,13 @@ const handleDownloadPDFByDate = (date) => {
 
   return (
     <div className="flex flex-col h-auto bg-gray-100">
+      {/* 🔥 Loader Overlay */}
+      {loading && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[9999]">
+          <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      )}
+
       {/* Navbar */}
       <div className="bg-white shadow-md h-16 flex items-center px-6 fixed w-full z-50 top-0">
         <h1 className="text-2xl font-bold text-gray-800">Savollar Bazasi</h1>
@@ -217,11 +221,7 @@ const handleDownloadPDFByDate = (date) => {
 
         {/* Main Content */}
         <div ref={contentRef} className={`flex-1 p-6 transition-all duration-300 ${isSidebarOpen ? "ml-64" : "ml-20"} overflow-y-auto h-[calc(100vh-4rem)]`}>
-          {loading ? (
-            <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-            </div>
-          ) : error ? (
+          {error ? (
             <div className="text-center p-4 text-red-600 bg-red-100 rounded-lg shadow-md">
               Xatolik: {error}
             </div>
