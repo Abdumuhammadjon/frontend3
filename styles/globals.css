@@ -27,29 +27,4 @@ body, input, select, textarea, button {
   text-rendering: optimizeLegibility;
 }
 
-::placeholder {
-  opacity: 1 !important;
-  color: #4b5563; /* text-gray-600 */
-}
 
-/* === Print rejimi (PDF uchun) === */
-@media print {
-  body {
-    background: #fff !important;
-    font-size: 12px !important; /* kichikroq font */
-    line-height: 1.4 !important;
-  }
-
-  .pdf-container {
-    width: 100% !important;
-    max-width: 700px !important;
-    margin: 0 auto !important;
-    padding: 10px !important;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-  }
-
-  textarea, input {
-    font-size: 11px !important;
-  }
-}
