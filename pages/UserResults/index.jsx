@@ -41,6 +41,7 @@ const UserResults = () => {
           },
         });
 
+        // ✅ Backend endi results + answers qaytaradi
         setResults(response.data.results || []);
       } catch (err) {
         setError(err.response?.data?.error || "Natijalarni olishda xatolik");
@@ -93,7 +94,6 @@ const UserResults = () => {
 
       results.forEach((res, index) => {
         let startY = 30;
-
         if (index > 0) doc.addPage();
 
         doc.setFontSize(14);
@@ -111,7 +111,7 @@ const UserResults = () => {
             a.question,
             a.user_answer || "-",
             a.correct_answer,
-            a.user_answer === a.correct_answer ? "✅" : "❌",
+            a.is_correct ? "✅" : "❌",
           ]);
 
           autoTable.default(doc, {
@@ -121,14 +121,6 @@ const UserResults = () => {
             theme: "grid",
             styles: { fontSize: 9, cellPadding: 2 },
             headStyles: { fillColor: [41, 128, 185] },
-            didParseCell: (data) => {
-              if (data.column.index === 4 && data.cell.raw === "❌") {
-                data.cell.styles.textColor = [200, 0, 0];
-              }
-              if (data.column.index === 4 && data.cell.raw === "✅") {
-                data.cell.styles.textColor = [0, 150, 0];
-              }
-            },
           });
         }
       });
@@ -155,20 +147,8 @@ const UserResults = () => {
           <div className="flex gap-4">
             <button
               onClick={handleDownloadPDF}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200 flex items-center gap-2"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
-                  clipRule="evenodd"
-                />
-              </svg>
               PDF yuklab olish
             </button>
             <button
@@ -199,7 +179,7 @@ const UserResults = () => {
                   <th className="px-4 py-2 text-gray-500 uppercase">To‘g‘ri javoblar</th>
                   <th className="px-4 py-2 text-gray-500 uppercase">Umumiy savollar</th>
                   <th className="px-4 py-2 text-gray-500 uppercase">Foiz</th>
-                  <th className="px-4 py-2 text-gray-500 uppercase">Sana</th>
+                  <th className="px-4 py-2 text-gray-500 uppercase">Savollar</th>
                   <th className="px-4 py-2 text-gray-500 uppercase">Amallar</th>
                 </tr>
               </thead>
@@ -210,7 +190,28 @@ const UserResults = () => {
                     <td className="px-4 py-3">{result.correctAnswers}</td>
                     <td className="px-4 py-3">{result.totalQuestions}</td>
                     <td className="px-4 py-3">{result.scorePercentage}%</td>
-                    <td className="px-4 py-3">{result.date}</td>
+                    <td className="px-4 py-3">
+                      {result.answers?.map((a, i) => (
+                        <div key={i} className="text-left mb-1">
+                          <p className="text-gray-700 font-medium">❓ {a.question}</p>
+                          <p>
+                            Sizning javobingiz:{" "}
+                            <span
+                              className={
+                                a.is_correct
+                                  ? "text-green-600 font-semibold"
+                                  : "text-red-600 font-semibold"
+                              }
+                            >
+                              {a.user_answer}
+                            </span>
+                          </p>
+                          <p className="text-gray-600">
+                            To‘g‘ri javob: {a.correct_answer}
+                          </p>
+                        </div>
+                      ))}
+                    </td>
                     <td className="px-4 py-3">
                       <button
                         onClick={() => handleDelete(result.resultId)}
