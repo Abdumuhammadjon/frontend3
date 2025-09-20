@@ -75,192 +75,58 @@ const UserResults = () => {
     }
   };
 
-// Shu funksiyani sizning hozirgi handleDownloadPDF o'rniga qo'ying
-const handleDownloadPDF = async () => {
-  try {
-    if (!results || results.length === 0) {
-      alert("PDF uchun natijalar topilmadi.");
-      return;
-    }
-
-    const [{ jsPDF }, autoTable] = await Promise.all([
-      import("jspdf"),
-      import("jspdf-autotable"),
-    ]);
-
-    // ---- parser: DD/MM/YYYY, HH:mm:ss va ba'zi boshqa formatlar ----
-    const parseDateString = (s) => {
-      if (!s) return null;
-      if (s instanceof Date) return s;
-      const str = String(s).trim();
-
-      // 1) DD/MM/YYYY, HH:MM:SS  (masalan: "19/05/2025, 03:46:26")
-      const m1 = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4}),\s*(\d{1,2}):(\d{2}):(\d{2})$/);
-      if (m1) {
-        const day = parseInt(m1[1], 10);
-        const month = parseInt(m1[2], 10) - 1;
-        const year = parseInt(m1[3], 10);
-        const hh = parseInt(m1[4], 10);
-        const mm = parseInt(m1[5], 10);
-        const ss = parseInt(m1[6], 10);
-        return new Date(year, month, day, hh, mm, ss);
+  // Har bir natija uchun PDF yuklash funksiyasi
+  const handleSingleResultPDF = async (result) => {
+    try {
+      if (!result || !Array.isArray(result.answers) || result.answers.length === 0) {
+        alert("Ushbu natijada savollar topilmadi.");
+        return;
       }
 
-      // 2) DD/MM/YYYY, HH:MM (no seconds)
-      const m2 = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4}),\s*(\d{1,2}):(\d{2})$/);
-      if (m2) {
-        const day = parseInt(m2[1], 10);
-        const month = parseInt(m2[2], 10) - 1;
-        const year = parseInt(m2[3], 10);
-        const hh = parseInt(m2[4], 10);
-        const mm = parseInt(m2[5], 10);
-        return new Date(year, month, day, hh, mm, 0);
-      }
+      const [{ jsPDF }, autoTable] = await Promise.all([
+        import("jspdf"),
+        import("jspdf-autotable"),
+      ]);
 
-      // 3) ISO yoki boshqa JS qabul qiladigan formatlarga harakat
-      const iso = new Date(str);
-      if (!isNaN(iso.getTime())) return iso;
+      const doc = new jsPDF();
 
-      return null;
-    };
-
-    // fallback function: agar date yo'q bo'lsa boshqa maydonlardan vaqt izlash
-    const asDate = (v) => {
-      if (!v) return null;
-      if (v instanceof Date) return v;
-      return parseDateString(v) || (isNaN(new Date(v).getTime()) ? null : new Date(v));
-    };
-
-    const pickAttemptTime = (r) => {
-      // 1) eng avvalo r.date (sizning holat)
-      const d0 = parseDateString(r.date);
-      if (d0) return d0;
-
-      // 2) boshqa result-level maydonlar
-      const cand = [r.submittedAt, r.finishedAt, r.completedAt, r.created_at, r.createdAt]
-        .map(asDate)
-        .filter(Boolean);
-      if (cand.length) return cand[0];
-
-      // 3) answers[] ichidan eng erta javob vaqti
-      if (Array.isArray(r.answers) && r.answers.length) {
-        const ans = r.answers
-          .map((a) =>
-            asDate(a.answeredAt || a.created_at || a.createdAt || a.time || a.timestamp)
-          )
-          .filter(Boolean)
-          .sort((a, b) => a - b);
-        if (ans.length) return ans[0];
-      }
-
-      return null;
-    };
-
-    // --- items tayyorlash ---
-    const items = results
-      .map((r) => ({ ...r, _attemptAt: pickAttemptTime(r) }))
-      .filter((r) => r._attemptAt) // faqat vaqti aniqlanganlar
-      .sort((a, b) => a._attemptAt - b._attemptAt);
-
-    if (items.length === 0) {
-      alert("Natijalarda to‘g‘ri date topilmadi (kutilgan format: DD/MM/YYYY, HH:mm:ss yoki ISO).");
-      return;
-    }
-
-    // --- sessionlarga bo'lish: 90 minut (1.5 soat) oraliq ---
-    const GAP = 90 * 60 * 1000;
-    const sessions = [];
-    let current = [];
-
-    for (let i = 0; i < items.length; i++) {
-      const cur = items[i];
-      if (current.length === 0) {
-        current.push(cur);
-        continue;
-      }
-      const prev = current[current.length - 1];
-      const diff = cur._attemptAt - prev._attemptAt;
-      if (diff > GAP) {
-        sessions.push(current);
-        current = [cur];
-      } else {
-        current.push(cur);
-      }
-    }
-    if (current.length) sessions.push(current);
-
-    // --- PDF tuzish ---
-    const doc = new jsPDF();
-
-    sessions.forEach((group, idx) => {
-      if (idx !== 0) doc.addPage();
-
-      // Header
       doc.setFontSize(16);
       doc.setTextColor(40, 60, 120);
-      doc.text("📊 Foydalanuvchi Natijalari", 105, 15, { align: "center" });
-
-      const first = group[0]._attemptAt;
-      const last = group[group.length - 1]._attemptAt;
-
-      const dateLabel = first.toLocaleDateString("uz-UZ", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-      });
-      const timeWindow = `${first.toLocaleTimeString("uz-UZ", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })} – ${last.toLocaleTimeString("uz-UZ", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}`;
+      doc.text("📝 Foydalanuvchi Natijasi", 105, 15, { align: "center" });
 
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
-      doc.text(`📅 Sana: ${dateLabel}   🕒 Oralig'i: ${timeWindow}`, 14, 25);
+      doc.text(`Foydalanuvchi: ${result.username || ""}`, 14, 25);
+      doc.text(`Sana: ${result.date || ""}`, 14, 32);
+      doc.text(
+        `To‘g‘ri javoblar: ${result.correctAnswers ?? ""} / ${result.totalQuestions ?? ""} (${result.scorePercentage ?? ""}%)`,
+        14,
+        39
+      );
 
-      // Jadval: foydalanuvchi natijalari
+      // Jadvalga tayyorlash
       autoTable.default(doc, {
-        startY: 35,
-        head: [["Foydalanuvchi", "To‘g‘ri", "Jami", "Foiz", "Vaqt"]],
-        body: group.map((r) => [
-          r.username ?? "",
-          String(r.correctAnswers ?? ""),
-          String(r.totalQuestions ?? ""),
-          r.scorePercentage != null ? `${r.scorePercentage}%` : "",
-          r._attemptAt.toLocaleTimeString("uz-UZ", {
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-          }),
+        startY: 48,
+        head: [["#", "Savol", "Sizning javobingiz", "To‘g‘ri javob"]],
+        body: result.answers.map((a, idx) => [
+          idx + 1,
+          a.questionText || a.question || "",
+          a.userAnswer || a.selectedAnswer || "",
+          a.correctAnswer || "",
         ]),
         theme: "striped",
-        styles: { fontSize: 10, halign: "center", cellPadding: 3 },
+        styles: { fontSize: 10, cellPadding: 3 },
         headStyles: { fillColor: [40, 60, 120], textColor: 255 },
-        columnStyles: { 0: { halign: "left" } },
+        columnStyles: { 1: { cellWidth: 70 } },
         margin: { left: 14, right: 14 },
         tableWidth: "auto",
       });
-    });
 
-    // Footer: sahifa raqamlari
-    const pageCount = doc.internal.getNumberOfPages();
-    for (let p = 1; p <= pageCount; p++) {
-      doc.setPage(p);
-      doc.setFontSize(10);
-      doc.setTextColor(120);
-      doc.text(`Sahifa ${p} / ${pageCount}`, 200, 290, { align: "right" });
+      doc.save(`foydalanuvchi_natijasi_${result.resultId}.pdf`);
+    } catch (err) {
+      alert("PDF yaratishda xatolik: " + (err?.message || "Noma'lum xatolik"));
     }
-
-    doc.save("foydalanuvchi_natijalari_guruhlangan.pdf");
-  } catch (err) {
-    alert("PDF yaratishda xatolik: " + (err?.message || "Noma'lum xatolik"));
-  }
-};
-
-
-
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 p-4 sm:p-6">
@@ -276,24 +142,6 @@ const handleDownloadPDF = async () => {
             Foydalanuvchi Natijalari
           </h2>
           <div className="flex gap-4">
-            <button
-              onClick={handleDownloadPDF}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200 flex items-center gap-2"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              PDF yuklab olish
-            </button>
             <button
               onClick={handleBack}
               className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition duration-200"
@@ -334,7 +182,16 @@ const handleDownloadPDF = async () => {
                     <td className="px-4 py-3">{result.totalQuestions}</td>
                     <td className="px-4 py-3">{result.scorePercentage}%</td>
                     <td className="px-4 py-3">{result.date}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 flex gap-2 justify-center">
+                      {/* PDF yuklash tugmasi */}
+                      <button
+                        onClick={() => handleSingleResultPDF(result)}
+                        className="text-blue-600 hover:text-blue-800 transition duration-150 border border-blue-600 rounded px-2 py-1 text-xs"
+                        title="PDF yuklash"
+                      >
+                        PDF
+                      </button>
+                      {/* O‘chirish tugmasi */}
                       <button
                         onClick={() => handleDelete(result.resultId)}
                         className="text-red-600 hover:text-red-800 transition duration-150"
@@ -551,4 +408,4 @@ export default UserResults;
 //   );
 // };
 
-// export default UserResults; 
+// export default UserResults;
