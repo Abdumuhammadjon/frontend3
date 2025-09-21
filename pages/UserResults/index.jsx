@@ -52,6 +52,8 @@ const UserResults = () => {
 
     fetchResults();
   }, [router]);
+  console.log(results);
+  
 
   const handleBack = () => {
     router.push("/questions");
