@@ -41,7 +41,9 @@ useEffect(() => {
       });
 
       // ✅ Backenddan qaytayotgan ma’lumotlarni log qilamiz
-      console.log("Backenddan kelgan data:", response.data);
+     
+      console.log("Natijalar:", JSON.stringify(response.data, null, 2));
+
 
       // Agar `results` massiv bo‘lsa
       setResults(response.data.results || []);
