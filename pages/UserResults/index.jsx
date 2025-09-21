@@ -1,4 +1,4 @@
- import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { BarChart } from "lucide-react";
@@ -9,55 +9,55 @@ const UserResults = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const router = useRouter();
-useEffect(() => {
-  const token = localStorage.getItem("token");
-  const userId = localStorage.getItem("userId");
-  const subjectId = localStorage.getItem("subjectId");
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const userId = localStorage.getItem("userId");
+    const subjectId = localStorage.getItem("subjectId");
 
-  if (!token) {
-    router.push("/Login");
-    return;
-  }
-
-  const fetchResults = async () => {
-    if (!userId) {
-      setError("Foydalanuvchi ID topilmadi");
-      setLoading(false);
+    if (!token) {
+      router.push("/Login");
       return;
     }
 
-    try {
-      setLoading(true);
-      setError(null);
-      const url = subjectId
-        ? `https://backed1.onrender.com/api/userResults/${userId}?subjectId=${subjectId}`
-        : `https://backed1.onrender.com/api/userResults/${userId}`;
+    const fetchResults = async () => {
+      if (!userId) {
+        setError("Foydalanuvchi ID topilmadi");
+        setLoading(false);
+        return;
+      }
 
-      const response = await axios.get(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
+      try {
+        setLoading(true);
+        setError(null);
+        const url = subjectId
+          ? `https://backed1.onrender.com/api/userResults/${userId}?subjectId=${subjectId}`
+          : `https://backed1.onrender.com/api/userResults/${userId}`;
 
-      // ✅ Backenddan qaytayotgan ma’lumotlarni log qilamiz
-     
-      console.log("Natijalar:", JSON.stringify(response.data, null, 2));
+        const response = await axios.get(url, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        // ✅ Backenddan qaytayotgan ma’lumotlarni log qilamiz
+
+        console.log("Natijalar:", JSON.stringify(response.data, null, 2));
 
 
-      // Agar `results` massiv bo‘lsa
-      setResults(response.data.results || []);
-    } catch (err) {
-      setError(err.response?.data?.error || "Natijalarni olishda xatolik");
-    } finally {
-      setLoading(false);
-    }
-  };
+        // Agar `results` massiv bo‘lsa
+        setResults(response.data.results || []);
+      } catch (err) {
+        setError(err.response?.data?.error || "Natijalarni olishda xatolik");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  fetchResults();
-}, [router]);
+    fetchResults();
+  }, [router]);
 
-  
+
 
   const handleBack = () => {
     router.push("/questions");
@@ -114,7 +114,8 @@ useEffect(() => {
         if (res.answers && res.answers.length > 0) {
           const tableData = res.answers.map((a, i) => [
             i + 1,
-            a.question,
+            - a.question,
+            + a.question_text,   // ✅ to‘g‘ri maydon
             a.user_answer || "-",
             a.correct_answer,
             a.is_correct ? "✅" : "❌",
@@ -199,7 +200,11 @@ useEffect(() => {
                     <td className="px-4 py-3">
                       {result.answers?.map((a, i) => (
                         <div key={i} className="text-left mb-1">
-                          <p className="text-gray-700 font-medium">❓ {a.question}</p>
+                          // Saytdagi jadvalda
+                          <p className="text-gray-700 font-medium">
+                            - ❓ {a.question}
+                            + ❓ {a.question_text}   // ✅ to‘g‘ri maydon
+                          </p>
                           <p>
                             Sizning javobingiz:{" "}
                             <span
