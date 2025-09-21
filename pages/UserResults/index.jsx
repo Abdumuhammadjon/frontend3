@@ -9,50 +9,52 @@ const UserResults = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const router = useRouter();
+useEffect(() => {
+  const token = localStorage.getItem("token");
+  const userId = localStorage.getItem("userId");
+  const subjectId = localStorage.getItem("subjectId");
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    const userId = localStorage.getItem("userId");
-    const subjectId = localStorage.getItem("subjectId");
+  if (!token) {
+    router.push("/Login");
+    return;
+  }
 
-    if (!token) {
-      router.push("/Login");
+  const fetchResults = async () => {
+    if (!userId) {
+      setError("Foydalanuvchi ID topilmadi");
+      setLoading(false);
       return;
     }
 
-    const fetchResults = async () => {
-      if (!userId) {
-        setError("Foydalanuvchi ID topilmadi");
-        setLoading(false);
-        return;
-      }
+    try {
+      setLoading(true);
+      setError(null);
+      const url = subjectId
+        ? `https://backed1.onrender.com/api/userResults/${userId}?subjectId=${subjectId}`
+        : `https://backed1.onrender.com/api/userResults/${userId}`;
 
-      try {
-        setLoading(true);
-        setError(null);
-        const url = subjectId
-          ? `https://backed1.onrender.com/api/userResults/${userId}?subjectId=${subjectId}`
-          : `https://backed1.onrender.com/api/userResults/${userId}`;
+      const response = await axios.get(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
 
-        const response = await axios.get(url, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
+      // ✅ Backenddan qaytayotgan ma’lumotlarni log qilamiz
+      console.log("Backenddan kelgan data:", response.data);
 
-        // ✅ Backend endi results + answers qaytaradi
-        setResults(response.data.results || []);
-      } catch (err) {
-        setError(err.response?.data?.error || "Natijalarni olishda xatolik");
-      } finally {
-        setLoading(false);
-      }
-    };
+      // Agar `results` massiv bo‘lsa
+      setResults(response.data.results || []);
+    } catch (err) {
+      setError(err.response?.data?.error || "Natijalarni olishda xatolik");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchResults();
-  }, [router]);
-  console.log(results);
+  fetchResults();
+}, [router]);
+
   
 
   const handleBack = () => {
