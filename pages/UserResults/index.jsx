@@ -114,8 +114,7 @@ const UserResults = () => {
         if (res.answers && res.answers.length > 0) {
           const tableData = res.answers.map((a, i) => [
             i + 1,
-            - a.question,
-            + a.question_text,   // ✅ to‘g‘ri maydon
+            a.question_text,   // ✅ to‘g‘ri maydon
             a.user_answer || "-",
             a.correct_answer,
             a.is_correct ? "✅" : "❌",
@@ -202,8 +201,7 @@ const UserResults = () => {
                         <div key={i} className="text-left mb-1">
                           // Saytdagi jadvalda
                           <p className="text-gray-700 font-medium">
-                            - ❓ {a.question}
-                            + ❓ {a.question_text}   // ✅ to‘g‘ri maydon
+                            ❓ {a.question_text}   {/* ✅ to‘g‘ri maydon */}
                           </p>
                           <p>
                             Sizning javobingiz:{" "}
