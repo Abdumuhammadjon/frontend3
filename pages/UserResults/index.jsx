@@ -199,8 +199,8 @@ const UserResults = () => {
                     <td className="px-4 py-3">
                       {result.answers?.map((a, i) => (
                         <div key={i} className="text-left mb-1">
-                          
-                        
+
+
                           <p>
                             Sizning javobingiz:{" "}
                             <span
