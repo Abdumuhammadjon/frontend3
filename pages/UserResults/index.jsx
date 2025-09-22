@@ -185,7 +185,7 @@ const UserResults = () => {
                   <th className="px-4 py-2 text-gray-500 uppercase">To‘g‘ri javoblar</th>
                   <th className="px-4 py-2 text-gray-500 uppercase">Umumiy savollar</th>
                   <th className="px-4 py-2 text-gray-500 uppercase">Foiz</th>
-                  <th className="px-4 py-2 text-gray-500 uppercase">Savollar</th>
+                 
                   <th className="px-4 py-2 text-gray-500 uppercase">Amallar</th>
                 </tr>
               </thead>
@@ -194,30 +194,10 @@ const UserResults = () => {
                   <tr key={result.resultId} className="hover:bg-gray-50">
                     <td className="px-4 py-3">{result.username}</td>
                     <td className="px-4 py-3">{result.correctAnswers}</td>
-                    <td className="px-4 py-3">{result.totalQuestions}</td>
+                    
                     <td className="px-4 py-3">{result.scorePercentage}%</td>
                     <td className="px-4 py-3">
-                      {result.answers?.map((a, i) => (
-                        <div key={i} className="text-left mb-1">
-
-
-                          <p>
-                            Sizning javobingiz:{" "}
-                            <span
-                              className={
-                                a.is_correct
-                                  ? "text-green-600 font-semibold"
-                                  : "text-red-600 font-semibold"
-                              }
-                            >
-                              {a.user_answer}
-                            </span>
-                          </p>
-                          <p className="text-gray-600">
-                            To‘g‘ri javob: {a.correct_answer}
-                          </p>
-                        </div>
-                      ))}
+                    
                     </td>
                     <td className="px-4 py-3">
                       <button
