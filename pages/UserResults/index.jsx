@@ -183,7 +183,7 @@ const UserResults = () => {
                 <tr>
                   <th className="px-4 py-2 text-gray-500 uppercase">Foydalanuvchi</th>
                   <th className="px-4 py-2 text-gray-500 uppercase">To‘g‘ri javoblar</th>
-                  <th className="px-4 py-2 text-gray-500 uppercase">Umumiy savollar</th>
+                
                   <th className="px-4 py-2 text-gray-500 uppercase">Foiz</th>
                  
                   <th className="px-4 py-2 text-gray-500 uppercase">Amallar</th>
