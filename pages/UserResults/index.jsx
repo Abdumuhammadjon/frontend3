@@ -199,10 +199,8 @@ const UserResults = () => {
                     <td className="px-4 py-3">
                       {result.answers?.map((a, i) => (
                         <div key={i} className="text-left mb-1">
-                          // Saytdagi jadvalda
-                          <p className="text-gray-700 font-medium">
-                            ❓ {a.question_text}   {/* ✅ to‘g‘ri maydon */}
-                          </p>
+                          
+                        
                           <p>
                             Sizning javobingiz:{" "}
                             <span
