@@ -201,7 +201,7 @@ const UserResults = () => {
                         <div key={i} className="text-left mb-1">
                           // Saytdagi jadvalda
                           <p className="text-gray-700 font-medium">
-                            ❓ {a.user_answer, a.coorect_answer}   {/* ✅ to‘g‘ri maydon */}
+                            natija   {/* ✅ to‘g‘ri maydon */}
                           </p>
                           <p>
                             Sizning javobingiz:{" "}
