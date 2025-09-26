@@ -141,81 +141,89 @@ const GroupedQuestions = ({ subjectId }) => {
   };
 
   // PDF yuklab olish
-  const handleDownloadPDFByDate = (date, questions) => {
-    if (!questions || questions.length === 0) return;
+ // PDF yuklab olish - albom shakli
+const handleDownloadPDFByDate = (date, questions) => {
+  if (!questions || questions.length === 0) return;
 
-    const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
-    const pageHeight = doc.internal.pageSize.height;
-    const pageWidth = doc.internal.pageSize.width;
-    const margin = 15;
-    let y = margin + 10;
+  // ✅ Albom shakli - portrait
+  const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+  const pageHeight = doc.internal.pageSize.height;
+  const pageWidth = doc.internal.pageSize.width;
+  const margin = 15;
+  let y = margin + 10;
 
-    // 🔹 Font ulash
-    addCustomFont(doc);
+  // 🔹 Font ulash
+  addCustomFont(doc);
 
-    // 🔹 Sarlavha
-    doc.setFontSize(10);
-    doc.setTextColor(40, 60, 120);
-    doc.text(`📘 Savollar to‘plami (${date})`, pageWidth / 2, margin, {
-      align: "center",
-    });
-    y += 10;
+  // 🔹 Sarlavha
+  doc.setFontSize(14);
+  doc.setTextColor(40, 60, 120);
+  doc.text(`📘 Savollar to‘plami (${date})`, pageWidth / 2, margin, {
+    align: "center",
+  });
+  y += 12;
 
-    // 🔹 Har bir savolni yozish
-    questions.forEach((q, index) => {
-      doc.setFontSize(12);
-      doc.setTextColor(0, 0, 0);
+  // 🔹 Har bir savolni yozish
+  questions.forEach((q, index) => {
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
 
-      const questionText = sanitizeText(`${index + 1}. ${q.question_text}`);
-      const splitText = doc.splitTextToSize(questionText, pageWidth - margin * 2);
+    // Matnni tozalash
+    const questionText = sanitizeText(`${index + 1}. ${q.question_text}`);
+    const splitText = doc.splitTextToSize(questionText, pageWidth - margin * 2);
+    const neededHeight = splitText.length * 6;
 
-      const neededHeight = splitText.length * 6;
-
-      if (y + neededHeight > pageHeight - margin) {
-        doc.addPage();
-        y = margin;
-      }
-
-      doc.text(splitText, margin, y);
-      y += neededHeight + 3;
-
-      // Variantlarni jadvalda chiqarish
-      const rows = q.options.map((opt) => [
-        sanitizeText(opt.option_text) + (opt.is_correct ? "  ✓" : ""),
-      ]);
-
-      autoTable(doc, {
-        startY: y,
-        body: rows,
-        styles: {
-          font: "NotoSans",
-          fontSize: 10,
-          halign: "left",
-          cellPadding: 2,
-        },
-        theme: "grid",
-        margin: { left: margin, right: margin },
-        pageBreak: "auto",
-      });
-
-      if (doc.lastAutoTable && doc.lastAutoTable.finalY) {
-        y = doc.lastAutoTable.finalY + 8;
-      }
-    });
-
-    // 🔹 Sahifa raqamlari
-    const pageCount = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(10);
-      doc.setTextColor(100);
-      doc.text(`Sahifa ${i} / ${pageCount}`, pageWidth - 15, pageHeight - 5, {
-        align: "right",
-      });
+    // Sahifa chegarasi
+    if (y + neededHeight > pageHeight - margin) {
+      doc.addPage();
+      y = margin;
     }
 
-    doc.save(`savollar-${date}.pdf`);
-  };
+    // Savolni yozish
+    doc.text(splitText, margin, y);
+    y += neededHeight + 3;
+
+    // Variantlarni jadvalda chiqarish
+    const rows = q.options.map((opt) => [
+      sanitizeText(opt.option_text) + (opt.is_correct ? "  ✓" : ""),
+    ]);
+
+    autoTable(doc, {
+      startY: y,
+      body: rows,
+      styles: {
+        font: "NotoSans",
+        fontSize: 10,
+        halign: "left",
+        cellPadding: 2,
+      },
+      theme: "grid",
+      margin: { left: margin, right: margin },
+      tableWidth: "wrap", // Albom shaklida moslashadi
+      pageBreak: "auto",
+    });
+
+    // Jadval oxirini olish
+    if (doc.lastAutoTable && doc.lastAutoTable.finalY) {
+      y = doc.lastAutoTable.finalY + 8;
+    }
+  });
+
+  // 🔹 Sahifa raqamlari
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Sahifa ${i} / ${pageCount}`, pageWidth - margin, pageHeight - 5, {
+      align: "right",
+    });
+  }
+
+  // 🔹 PDF saqlash
+  doc.save(`savollar-${date}.pdf`);
+};
+
 
   return (
     <div className="flex flex-col h-auto bg-gray-100">
