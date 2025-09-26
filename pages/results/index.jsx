@@ -135,10 +135,10 @@ const GroupedQuestions = ({ subjectId }) => {
 
   // Font qo'shish
   const addCustomFont = (doc) => {
-    doc.addFileToVFS("NotoSans.ttf", font);
-    doc.addFont("NotoSans.ttf", "NotoSans", "normal");
-    doc.setFont("NotoSans");
-  };
+  doc.addFileToVFS("NotoSans.ttf", font); // font - Base64 string
+  doc.addFont("NotoSans.ttf", "NotoSans", "normal");
+  doc.setFont("NotoSans");
+};
 
   // PDF yuklab olish
  // PDF yuklab olish - albom shakli
@@ -154,6 +154,8 @@ const handleDownloadPDFByDate = (date, questions) => {
 
   // 🔹 Font ulash
   addCustomFont(doc);
+
+ 
 
   // 🔹 Sarlavha
   doc.setFontSize(14);
