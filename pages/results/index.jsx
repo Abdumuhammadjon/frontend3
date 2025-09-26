@@ -4,13 +4,7 @@ import { useRouter } from 'next/router';
 import { Menu, Home, Users, BarChart, Settings, LogOut, Trash2 } from 'lucide-react';
 
 // Matnni tozalash funksiyasi (apostrof va o'xshash belgilar uchun)
-const sanitizeText = (text) => {
-  if (!text) return text;
-  return text
-    .replace(/'/g, "ʼ")   // oddiy apostrofni o‘zgartirish (o‘rniga oʻxshash unicode belgisi)
-    .replace(/"/g, "”")   // qo‘shtirnoqni o‘zgartirish
-    .replace(/`/g, "´");  // backtickni o‘zgartirish
-};
+
 
 const GroupedQuestions = ({ subjectId }) => {
   const [groupedQuestions, setGroupedQuestions] = useState({});
@@ -22,6 +16,14 @@ const GroupedQuestions = ({ subjectId }) => {
   const contentRef = useRef(null);
 
   const router = useRouter();
+
+  const sanitizeText = (text) => {
+  if (!text) return text;
+  return text
+    .replace(/'/g, "ʼ")   // oddiy apostrofni o‘zgartirish (o‘rniga oʻxshash unicode belgisi)
+    .replace(/"/g, "”")   // qo‘shtirnoqni o‘zgartirish
+    .replace(/`/g, "´");  // backtickni o‘zgartirish
+};
 
   useEffect(() => {
     const storedSubjectId = localStorage.getItem("subjectId");
