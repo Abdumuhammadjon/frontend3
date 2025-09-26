@@ -117,17 +117,19 @@ const handleDownloadPDFByDate = (date) => {
 
   Promise.all([
     import("jspdf"),
-    import("jspdf-autotable")
-  ]).then(([{ jsPDF }, autoTable]) => {
+  ]).then(([{ jsPDF }]) => {
+    // Landscape formatda jsPDF yaratamiz
     const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
-    const pageHeight = doc.internal.pageSize.height;
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 15;
     let y = margin + 10;
 
     // Sarlavha
     doc.setFontSize(16);
     doc.setTextColor(40, 60, 120);
-    doc.text(`📘 Savollar to'plami (${formatDate(date)})`, doc.internal.pageSize.getWidth() / 2, margin, { align: "center" });
+    doc.text(`📘 Savollar to'plami (${formatDate(date)})`, pageWidth / 2, margin, { align: "center" });
     y += 10;
 
     questions.forEach((q, index) => {
@@ -135,8 +137,8 @@ const handleDownloadPDFByDate = (date) => {
       doc.setTextColor(0, 0, 0);
 
       const questionText = `${index + 1}. ${q.question_text}`;
-      const splitQuestionText = doc.splitTextToSize(questionText, 260);
-      const questionHeight = splitQuestionText.length * 6;
+      const splitQuestionText = doc.splitTextToSize(questionText, pageWidth - 2 * margin);
+      const questionHeight = splitQuestionText.length * 7;
 
       if (y + questionHeight > pageHeight - margin) {
         doc.addPage();
@@ -144,12 +146,12 @@ const handleDownloadPDFByDate = (date) => {
       }
 
       doc.text(splitQuestionText, margin, y);
-      y += questionHeight + 3;
+      y += questionHeight + 4;
 
       q.options.forEach(opt => {
         const optionText = (opt.is_correct ? "✓ " : "") + opt.option_text;
-        const splitOptionText = doc.splitTextToSize(optionText, 260);
-        const optionHeight = splitOptionText.length * 6;
+        const splitOptionText = doc.splitTextToSize(optionText, pageWidth - 2 * margin - 10);
+        const optionHeight = splitOptionText.length * 7;
 
         if (y + optionHeight > pageHeight - margin) {
           doc.addPage();
@@ -161,15 +163,16 @@ const handleDownloadPDFByDate = (date) => {
         y += optionHeight + 2;
       });
 
-      y += 5;
+      y += 6; // savollar orasiga biroz bo'sh joy
     });
 
+    // Sahifa raqamlari
     const pageCount = doc.internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       doc.setFontSize(10);
-      doc.setTextColor(100);
-      doc.text(`Sahifa ${i} / ${pageCount}`, doc.internal.pageSize.getWidth() - margin, pageHeight - 5, { align: "right" });
+      doc.setTextColor(150);
+      doc.text(`Sahifa ${i} / ${pageCount}`, pageWidth - margin, pageHeight - 10, { align: "right" });
     }
 
     doc.save(`savollar-${date}.pdf`);
