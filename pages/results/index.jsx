@@ -1,3 +1,5 @@
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
  // frontend/pages/GroupedQuestions.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
@@ -125,8 +127,6 @@ const GroupedQuestions = ({ subjectId }) => {
   };
 
   // PDF yuklab olish
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
 
 const handleDownloadPDFByDate = (date) => {
   const questions = groupedQuestions[date];
