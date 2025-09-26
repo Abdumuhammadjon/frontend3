@@ -1,4 +1,4 @@
-  // frontend/pages/GroupedQuestions.jsx
+ // frontend/pages/GroupedQuestions.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import axios from "axios";
