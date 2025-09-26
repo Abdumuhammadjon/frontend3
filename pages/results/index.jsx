@@ -1,10 +1,7 @@
+import { jsPDF } from "jspdf";
 
 import autoTable from "jspdf-autotable";
 import font from "@/fonts/NotoSans"; // Base64 kodlangan font js fayl
-import { jsPDF } from "jspdf";
-import { registerNotoSans } from "@/utils/pdfFont";
-
-
 
  // frontend/pages/GroupedQuestions.jsx
 import React, { useState, useEffect, useRef } from 'react';
@@ -142,35 +139,65 @@ const addCustomFont = (doc) => {
   doc.setFont("NotoSans");
 };
 
-const handleDownloadPDFByDate = (date) => {
-  const questions = groupedQuestions[date];
+const handleDownloadPDFByDate = (date, questions) => {
   if (!questions || questions.length === 0) return;
 
   const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+  const pageHeight = doc.internal.pageSize.height;
+  const margin = 15;
+  let y = margin + 10;
 
-  // ✅ Fontni ulash
-  registerNotoSans(doc);
-  doc.setFont("NotoSans", "normal"); // default font sifatida o‘rnatish
-  doc.setFontSize(12);
+  // 🔹 Custom font ulash
+  addCustomFont(doc);
 
-  let y = 20; // boshi
-  doc.text(`Savollar (${date})`, 15, y);
+  doc.setFontSize(16);
+  doc.setTextColor(40, 60, 120);
+  doc.text(`📘 Savollar to‘plami (${date})`, 105, margin, { align: "center" });
   y += 10;
 
   questions.forEach((q, index) => {
-    const questionText = `${index + 1}. ${q.question}`;
-    const splitText = doc.splitTextToSize(questionText, 180); // matnni avtomatik bo‘lish
-    doc.text(splitText, 15, y);
-    y += splitText.length * 7; // joy tashlash
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
 
-    if (y > 270) {
+    const questionText = (index + 1) + ". " + q.question_text;
+    const splitText = doc.splitTextToSize(questionText, 170);
+    const neededHeight = splitText.length * 6;
+
+    if (y + neededHeight > pageHeight - margin) {
       doc.addPage();
-      y = 20;
-      doc.setFont("NotoSans", "normal");
+      y = margin;
+    }
+
+    doc.text(splitText, margin, y);
+    y += neededHeight + 3;
+
+    const rows = q.options.map((opt) => [
+      opt.option_text + (opt.is_correct ? "  ✓" : "")
+    ]);
+
+    autoTable(doc, {
+      startY: y,
+      body: rows,
+      styles: { fontSize: 10, halign: "left", cellPadding: 2 },
+      theme: "grid",
+      margin: { left: margin, right: margin },
+      pageBreak: "auto",
+    });
+
+    if (doc.lastAutoTable && doc.lastAutoTable.finalY) {
+      y = doc.lastAutoTable.finalY + 8;
     }
   });
 
-  doc.save(`savollar_${date}.pdf`);
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Sahifa ${i} / ${pageCount}`, 200, pageHeight - 5, { align: "right" });
+  }
+
+  doc.save(`savollar-${date}.pdf`);
 };
 
 
