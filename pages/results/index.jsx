@@ -1,5 +1,5 @@
 import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
+
  // frontend/pages/GroupedQuestions.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
@@ -126,6 +126,8 @@ const GroupedQuestions = ({ subjectId }) => {
 
   // PDF yuklab olish
 
+
+
 const handleDownloadPDFByDate = (date) => {
   const questions = groupedQuestions[date];
   if (!questions || questions.length === 0) return;
@@ -137,20 +139,20 @@ const handleDownloadPDFByDate = (date) => {
 
   // Title
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(16);
+  doc.setFontSize(14);
   doc.setTextColor(40, 60, 120);
   doc.text(`📘 Savollar to'plami (${formatDate(date)})`, 105, margin, { align: "center" });
   y += 10;
 
   questions.forEach((q, index) => {
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(12);
+    doc.setFontSize(11);
     doc.setTextColor(0, 0, 0);
 
-    // ✅ Savol matni uzun bo‘lsa ham sahifadan chiqmaydi
+    // Savol matni (sahifadan chiqmasligi uchun bo‘lib yozamiz)
     const questionText = sanitizeText((index + 1) + ". " + q.question_text);
-    const splitText = doc.splitTextToSize(questionText, 180); // 180mm -> sahifa ichida qoladi
-    const neededHeight = splitText.length * 6;
+    const splitText = doc.splitTextToSize(questionText, 180);
+    const neededHeight = splitText.length * 5;
 
     if (y + neededHeight > pageHeight - margin) {
       doc.addPage();
@@ -158,44 +160,46 @@ const handleDownloadPDFByDate = (date) => {
     }
 
     doc.text(splitText, margin, y);
-    y += neededHeight + 3;
+    y += neededHeight + 2;
 
-    // ✅ Variantlar (jadval ko‘rinishida)
-    const rows = q.options.map((opt) => [
-      {
-        content: sanitizeText(opt.option_text),
-        styles: opt.is_correct
-          ? { fontStyle: "bold", textColor: [0, 100, 0] } // ✅ To‘g‘ri javob qalin yashil
-          : { fontStyle: "normal", textColor: [0, 0, 0] },
-      },
-    ]);
+    // Variantlar (jadvalsiz)
+    q.options.forEach((opt) => {
+      const optionText = sanitizeText(opt.option_text);
 
-    autoTable(doc, {
-      startY: y,
-      body: rows,
-      styles: { fontSize: 11, halign: "left", cellPadding: 2, cellWidth: "wrap" },
-      theme: "grid",
-      margin: { left: margin, right: margin },
-      pageBreak: "auto",
+      if (y + 6 > pageHeight - margin) {
+        doc.addPage();
+        y = margin;
+      }
+
+      if (opt.is_correct) {
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(0, 120, 0); // yashil
+      } else {
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(0, 0, 0); // qora
+      }
+
+      const optSplit = doc.splitTextToSize(optionText, 170);
+      doc.text(optSplit, margin + 5, y);
+      y += optSplit.length * 5;
     });
 
-    if (doc.lastAutoTable && doc.lastAutoTable.finalY) {
-      y = doc.lastAutoTable.finalY + 8;
-    }
+    y += 4; // savollar orasiga bo‘sh joy
   });
 
-  // ✅ Har bir sahifa raqamini chiqarish
+  // Sahifa raqamlari
   const pageCount = doc.internal.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
+    doc.setFontSize(9);
     doc.setTextColor(100);
     doc.text(`Sahifa ${i} / ${pageCount}`, 200, pageHeight - 5, { align: "right" });
   }
 
   doc.save(`savollar-${date}.pdf`);
 };
+
 
 
   return (
