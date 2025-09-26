@@ -6,9 +6,7 @@ import axios from 'axios';
 import { useRouter } from 'next/router';
 import { Menu, Home, Users, BarChart, Settings, LogOut, Trash2 } from 'lucide-react';
 
-// PDF uchun kutubxonalar
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+
 
 const GroupedQuestions = ({ subjectId }) => {
   const [groupedQuestions, setGroupedQuestions] = useState({});
