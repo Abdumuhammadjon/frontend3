@@ -3,6 +3,15 @@ import axios from 'axios';
 import { useRouter } from 'next/router';
 import { Menu, Home, Users, BarChart, Settings, LogOut, Trash2 } from 'lucide-react';
 
+// Matnni tozalash funksiyasi (apostrof va o'xshash belgilar uchun)
+const sanitizeText = (text) => {
+  if (!text) return text;
+  return text
+    .replace(/'/g, "ʼ")   // oddiy apostrofni o‘zgartirish (o‘rniga oʻxshash unicode belgisi)
+    .replace(/"/g, "”")   // qo‘shtirnoqni o‘zgartirish
+    .replace(/`/g, "´");  // backtickni o‘zgartirish
+};
+
 const GroupedQuestions = ({ subjectId }) => {
   const [groupedQuestions, setGroupedQuestions] = useState({});
   const [selectedDate, setSelectedDate] = useState(null);
@@ -111,77 +120,74 @@ const GroupedQuestions = ({ subjectId }) => {
     });
   };
 
-const handleDownloadPDFByDate = (date) => {
-  const questions = groupedQuestions[date];
-  if (!questions || questions.length === 0) return;
+  const handleDownloadPDFByDate = (date) => {
+    const questions = groupedQuestions[date];
+    if (!questions || questions.length === 0) return;
 
-  Promise.all([
-    import("jspdf"),
-    import("jspdf-autotable")
-  ]).then(([{ jsPDF }, autoTable]) => {
-    const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
-    const pageHeight = doc.internal.pageSize.height;
-    const margin = 15;
-    let y = margin + 10;
+    Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable")
+    ]).then(([{ jsPDF }, autoTable]) => {
+      const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+      const pageHeight = doc.internal.pageSize.height;
+      const margin = 15;
+      let y = margin + 10;
 
-    // Sarlavha
-    doc.setFontSize(16);
-    doc.setTextColor(40, 60, 120);
-    doc.text(`📘 Savollar to'plami (${formatDate(date)})`, 105, margin, { align: "center" });
-    y += 10;
+      // Sarlavha
+      doc.setFontSize(16);
+      doc.setTextColor(40, 60, 120);
+      doc.text(`📘 Savollar to'plami (${formatDate(date)})`, 105, margin, { align: "center" });
+      y += 10;
 
-    questions.forEach((q, index) => {
-      doc.setFontSize(12);
-      doc.setTextColor(0, 0, 0);
+      questions.forEach((q, index) => {
+        doc.setFontSize(12);
+        doc.setTextColor(0, 0, 0);
 
-      // Savol matnini tozalash
-      const questionText = sanitizeText(`${index + 1}. ${q.question_text}`);
+        // Savol matnini tozalash
+        const questionText = sanitizeText(`${index + 1}. ${q.question_text}`);
 
-      // Matnni qatorlarga bo'lish (170 mm kenglikda)
-      const splitText = doc.splitTextToSize(questionText, 170);
-      const neededHeight = splitText.length * 6;
+        // Matnni qatorlarga bo'lish (170 mm kenglikda)
+        const splitText = doc.splitTextToSize(questionText, 170);
+        const neededHeight = splitText.length * 6;
 
-      if (y + neededHeight > pageHeight - margin) {
-        doc.addPage();
-        y = margin;
-      }
+        if (y + neededHeight > pageHeight - margin) {
+          doc.addPage();
+          y = margin;
+        }
 
-      doc.text(splitText, margin, y);
-      y += neededHeight + 3;
+        doc.text(splitText, margin, y);
+        y += neededHeight + 3;
 
-      // Variantlar uchun ma'lumotlar
-      const rows = q.options.map((opt) => [
-        sanitizeText(opt.option_text) + (opt.is_correct ? "  ✓" : "")
-      ]);
+        // Variantlar uchun ma'lumotlar
+        const rows = q.options.map((opt) => [
+          sanitizeText(opt.option_text) + (opt.is_correct ? "  ✓" : "")
+        ]);
 
-      autoTable.default(doc, {
-        startY: y,
-        body: rows,
-        styles: { fontSize: 10, halign: "left", cellPadding: 2 },
-        theme: "grid",
-        margin: { left: margin, right: margin },
-        pageBreak: "auto",
+        autoTable.default(doc, {
+          startY: y,
+          body: rows,
+          styles: { fontSize: 10, halign: "left", cellPadding: 2 },
+          theme: "grid",
+          margin: { left: margin, right: margin },
+          pageBreak: "auto",
+        });
+
+        if (doc.lastAutoTable?.finalY) {
+          y = doc.lastAutoTable.finalY + 8;
+        }
       });
 
-      if (doc.lastAutoTable?.finalY) {
-        y = doc.lastAutoTable.finalY + 8;
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Sahifa ${i} / ${pageCount}`, 200, pageHeight - 5, { align: "right" });
       }
+
+      doc.save(`savollar-${date}.pdf`);
     });
-
-    const pageCount = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(10);
-      doc.setTextColor(100);
-      doc.text(`Sahifa ${i} / ${pageCount}`, 200, pageHeight - 5, { align: "right" });
-    }
-
-    doc.save(`savollar-${date}.pdf`);
-  });
-};
-
-
-
+  };
 
   return (
     <div className="flex flex-col h-auto bg-gray-100">
