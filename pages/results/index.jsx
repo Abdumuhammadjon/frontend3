@@ -115,26 +115,23 @@ const handleDownloadPDFByDate = (date) => {
   const questions = groupedQuestions[date];
   if (!questions || questions.length === 0) return;
 
-  Promise.all([
-    import("jspdf"),
-  ]).then(([{ jsPDF }]) => {
-    // Landscape formatda jsPDF yaratamiz
-    const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
-
+  import("jspdf").then(({ jsPDF }) => {
+    const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 15;
     let y = margin + 10;
 
-    // Sarlavha
     doc.setFontSize(16);
     doc.setTextColor(40, 60, 120);
     doc.text(`📘 Savollar to'plami (${formatDate(date)})`, pageWidth / 2, margin, { align: "center" });
     y += 10;
 
+    doc.setCharSpace(0);  // Letter spacing ni 0 ga o'rnatamiz
+
     questions.forEach((q, index) => {
       doc.setFontSize(12);
-      doc.setTextColor(0, 0, 0);
+      doc.setTextColor(0);
 
       const questionText = `${index + 1}. ${q.question_text}`;
       const splitQuestionText = doc.splitTextToSize(questionText, pageWidth - 2 * margin);
@@ -144,10 +141,10 @@ const handleDownloadPDFByDate = (date) => {
         doc.addPage();
         y = margin;
       }
-
       doc.text(splitQuestionText, margin, y);
       y += questionHeight + 4;
 
+      doc.setFontSize(10);
       q.options.forEach(opt => {
         const optionText = (opt.is_correct ? "✓ " : "") + opt.option_text;
         const splitOptionText = doc.splitTextToSize(optionText, pageWidth - 2 * margin - 10);
@@ -157,16 +154,14 @@ const handleDownloadPDFByDate = (date) => {
           doc.addPage();
           y = margin;
         }
-
         doc.text("•", margin + 5, y);
         doc.text(splitOptionText, margin + 10, y);
         y += optionHeight + 2;
       });
 
-      y += 6; // savollar orasiga biroz bo'sh joy
+      y += 6;
     });
 
-    // Sahifa raqamlari
     const pageCount = doc.internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
@@ -178,6 +173,7 @@ const handleDownloadPDFByDate = (date) => {
     doc.save(`savollar-${date}.pdf`);
   });
 };
+
 
 
 
