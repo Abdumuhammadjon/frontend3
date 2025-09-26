@@ -1,5 +1,3 @@
-import jsPDF from "jspdf";
-import "jspdf-autotable";
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/router';
@@ -19,7 +17,13 @@ const GroupedQuestions = ({ subjectId }) => {
 
   const router = useRouter();
 
- 
+  const sanitizeText = (text) => {
+  if (!text) return text;
+  return text
+    .replace(/'/g, "ʼ")   // oddiy apostrofni o‘zgartirish (o‘rniga oʻxshash unicode belgisi)
+    .replace(/"/g, "”")   // qo‘shtirnoqni o‘zgartirish
+    .replace(/`/g, "´");  // backtickni o‘zgartirish
+};
 
   useEffect(() => {
     const storedSubjectId = localStorage.getItem("subjectId");
@@ -118,59 +122,74 @@ const GroupedQuestions = ({ subjectId }) => {
     });
   };
 
+  const handleDownloadPDFByDate = (date) => {
+    const questions = groupedQuestions[date];
+    if (!questions || questions.length === 0) return;
 
-const handleDownloadPDFByDate = (date) => {
-  const doc = new jsPDF();
-  const questions = groupedQuestions[date];
+    Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable")
+    ]).then(([{ jsPDF }, autoTable]) => {
+      const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+      const pageHeight = doc.internal.pageSize.height;
+      const margin = 15;
+      let y = margin + 10;
 
-  // Sarlavha
-  doc.setFontSize(16);
-  doc.setFont("helvetica", "bold");
-  doc.text("📘 Savollar To‘plami", 14, 20);
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "normal");
-  doc.text(`Sana: ${formatDate(date)}`, 14, 30);
+      // Sarlavha
+      doc.setFontSize(16);
+      doc.setTextColor(40, 60, 120);
+      doc.text(`📘 Savollar to'plami (${formatDate(date)})`, 105, margin, { align: "center" });
+      y += 10;
 
-  let y = 40;
+      questions.forEach((q, index) => {
+        doc.setFontSize(12);
+        doc.setTextColor(0, 0, 0);
 
-  questions.forEach((question, index) => {
-    // Savol matni
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-    doc.text(`${index + 1}) ${question.question_text}`, 14, y);
-    y += 8;
+        // Savol matnini tozalash
+        const questionText = sanitizeText(`${index + 1}. ${q.question_text}`);
 
-    // Variantlarni jadval ko‘rinishida chiqaramiz
-    const rows = question.options.map((opt) => [
-      opt.option_text,
-      opt.is_correct ? "✅ To‘g‘ri" : "",
-    ]);
+        // Matnni qatorlarga bo'lish (170 mm kenglikda)
+        const splitText = doc.splitTextToSize(questionText, 170);
+        const neededHeight = splitText.length * 6;
 
-    doc.autoTable({
-      startY: y,
-      head: [["Variant", "Holati"]],
-      body: rows,
-      theme: "grid",
-      headStyles: { fillColor: [41, 128, 185], halign: "center" },
-      bodyStyles: { halign: "left" },
-      styles: { fontSize: 11 },
-      columnStyles: {
-        0: { cellWidth: 140 },
-        1: { cellWidth: 40, halign: "center" },
-      },
+        if (y + neededHeight > pageHeight - margin) {
+          doc.addPage();
+          y = margin;
+        }
+
+        doc.text(splitText, margin, y);
+        y += neededHeight + 3;
+
+        // Variantlar uchun ma'lumotlar
+        const rows = q.options.map((opt) => [
+          sanitizeText(opt.option_text) + (opt.is_correct ? "  ✓" : "")
+        ]);
+
+        autoTable.default(doc, {
+          startY: y,
+          body: rows,
+          styles: { fontSize: 10, halign: "left", cellPadding: 2 },
+          theme: "grid",
+          margin: { left: margin, right: margin },
+          pageBreak: "auto",
+        });
+
+        if (doc.lastAutoTable?.finalY) {
+          y = doc.lastAutoTable.finalY + 8;
+        }
+      });
+
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Sahifa ${i} / ${pageCount}`, 200, pageHeight - 5, { align: "right" });
+      }
+
+      doc.save(`savollar-${date}.pdf`);
     });
-
-    y = doc.lastAutoTable.finalY + 10;
-    if (y > 270) {
-      doc.addPage();
-      y = 20;
-    }
-  });
-
-  // PDF’ni saqlash
-  doc.save(`Savollar_${date}.pdf`);
-};
-
+  };
 
   return (
     <div className="flex flex-col h-auto bg-gray-100">
