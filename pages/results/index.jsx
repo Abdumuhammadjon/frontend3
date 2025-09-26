@@ -111,7 +111,7 @@ const GroupedQuestions = ({ subjectId }) => {
     });
   };
 
-  const handleDownloadPDFByDate = (date) => {
+const handleDownloadPDFByDate = (date) => {
   const questions = groupedQuestions[date];
   if (!questions || questions.length === 0) return;
 
@@ -119,7 +119,7 @@ const GroupedQuestions = ({ subjectId }) => {
     import("jspdf"),
     import("jspdf-autotable")
   ]).then(([{ jsPDF }, autoTable]) => {
-    const doc = new jsPDF({ unit: "mm", format: "a4" });
+    const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
     const pageHeight = doc.internal.pageSize.height;
     const margin = 15;
     let y = margin + 10;
@@ -127,16 +127,15 @@ const GroupedQuestions = ({ subjectId }) => {
     // Sarlavha
     doc.setFontSize(16);
     doc.setTextColor(40, 60, 120);
-    doc.text(`📘 Savollar to'plami (${formatDate(date)})`, 105, margin, { align: "center" });
+    doc.text(`📘 Savollar to'plami (${formatDate(date)})`, doc.internal.pageSize.getWidth() / 2, margin, { align: "center" });
     y += 10;
 
     questions.forEach((q, index) => {
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
 
-      // Savol matnini split qilish
       const questionText = `${index + 1}. ${q.question_text}`;
-      const splitQuestionText = doc.splitTextToSize(questionText, 180);
+      const splitQuestionText = doc.splitTextToSize(questionText, 260);
       const questionHeight = splitQuestionText.length * 6;
 
       if (y + questionHeight > pageHeight - margin) {
@@ -147,10 +146,9 @@ const GroupedQuestions = ({ subjectId }) => {
       doc.text(splitQuestionText, margin, y);
       y += questionHeight + 3;
 
-      // Variantlarni alohida chiqarish (bullet bilan)
       q.options.forEach(opt => {
         const optionText = (opt.is_correct ? "✓ " : "") + opt.option_text;
-        const splitOptionText = doc.splitTextToSize(optionText, 170);
+        const splitOptionText = doc.splitTextToSize(optionText, 260);
         const optionHeight = splitOptionText.length * 6;
 
         if (y + optionHeight > pageHeight - margin) {
@@ -158,27 +156,26 @@ const GroupedQuestions = ({ subjectId }) => {
           y = margin;
         }
 
-        // Bullet qo'yish uchun biroz chapga siljitish
         doc.text("•", margin + 5, y);
         doc.text(splitOptionText, margin + 10, y);
         y += optionHeight + 2;
       });
 
-      y += 5; // savollar orasida biroz bo'sh joy
+      y += 5;
     });
 
-    // Sahifa raqamlari
     const pageCount = doc.internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       doc.setFontSize(10);
       doc.setTextColor(100);
-      doc.text(`Sahifa ${i} / ${pageCount}`, 200, pageHeight - 5, { align: "right" });
+      doc.text(`Sahifa ${i} / ${pageCount}`, doc.internal.pageSize.getWidth() - margin, pageHeight - 5, { align: "right" });
     }
 
     doc.save(`savollar-${date}.pdf`);
   });
 };
+
 
 
   return (
