@@ -167,7 +167,8 @@ const GroupedQuestions = ({ subjectId }) => {
       doc.setTextColor(0, 0, 0);
 
       const questionText = sanitizeText(`${index + 1}. ${q.question_text}`);
-      const splitText = doc.splitTextToSize(questionText, 150);
+      const splitText = doc.splitTextToSize(questionText, pageWidth - margin * 2);
+
       const neededHeight = splitText.length * 6;
 
       if (y + neededHeight > pageHeight - margin) {
@@ -183,19 +184,15 @@ const GroupedQuestions = ({ subjectId }) => {
         sanitizeText(opt.option_text) + (opt.is_correct ? "  ✓" : ""),
       ]);
 
-      autoTable(doc, {
-        startY: y,
-        body: rows,
-        styles: {
-          font: "NotoSans",
-          fontSize: 10,
-          halign: "left",
-          cellPadding: 2,
-        },
-        theme: "grid",
-        margin: { left: margin, right: margin },
-        pageBreak: "auto",
-      });
+    autoTable(doc, {
+  startY: y,
+  body: rows,
+  styles: { font: "NotoSans", fontSize: 10 },
+  theme: "grid",
+  margin: { left: margin, right: margin },
+  tableWidth: 'wrap', // albom shaklida moslashadi
+});
+
 
       if (doc.lastAutoTable && doc.lastAutoTable.finalY) {
         y = doc.lastAutoTable.finalY + 8;
