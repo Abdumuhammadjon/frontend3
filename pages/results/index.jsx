@@ -115,59 +115,65 @@ const handleDownloadPDFByDate = (date) => {
   const questions = groupedQuestions[date];
   if (!questions || questions.length === 0) return;
 
-  import("jspdf").then(({ jsPDF }) => {
+  Promise.all([
+    import("jspdf"),
+    import("jspdf-autotable")
+  ]).then(([{ jsPDF }, autoTable]) => {
     const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
+    const pageHeight = doc.internal.pageSize.height;
     const margin = 15;
     let y = margin + 10;
 
+    // Sarlavha
     doc.setFontSize(16);
     doc.setTextColor(40, 60, 120);
-    doc.text(`📘 Savollar to'plami (${formatDate(date)})`, pageWidth / 2, margin, { align: "center" });
+    doc.text(`📘 Savollar to'plami (${formatDate(date)})`, 105, margin, { align: "center" });
     y += 10;
-
-    doc.setCharSpace(0);  // Letter spacing ni 0 ga o'rnatamiz
 
     questions.forEach((q, index) => {
       doc.setFontSize(12);
-      doc.setTextColor(0);
+      doc.setTextColor(0, 0, 0);
 
-      const questionText = `${index + 1}. ${q.question_text}`;
-      const splitQuestionText = doc.splitTextToSize(questionText, pageWidth - 2 * margin);
-      const questionHeight = splitQuestionText.length * 7;
+      // Savol matnini tozalash
+      const questionText = sanitizeText(`${index + 1}. ${q.question_text}`);
 
-      if (y + questionHeight > pageHeight - margin) {
+      // Matnni qatorlarga bo'lish (170 mm kenglikda)
+      const splitText = doc.splitTextToSize(questionText, 170);
+      const neededHeight = splitText.length * 6;
+
+      if (y + neededHeight > pageHeight - margin) {
         doc.addPage();
         y = margin;
       }
-      doc.text(splitQuestionText, margin, y);
-      y += questionHeight + 4;
 
-      doc.setFontSize(10);
-      q.options.forEach(opt => {
-        const optionText = (opt.is_correct ? "✓ " : "") + opt.option_text;
-        const splitOptionText = doc.splitTextToSize(optionText, pageWidth - 2 * margin - 10);
-        const optionHeight = splitOptionText.length * 7;
+      doc.text(splitText, margin, y);
+      y += neededHeight + 3;
 
-        if (y + optionHeight > pageHeight - margin) {
-          doc.addPage();
-          y = margin;
-        }
-        doc.text("•", margin + 5, y);
-        doc.text(splitOptionText, margin + 10, y);
-        y += optionHeight + 2;
+      // Variantlar uchun ma'lumotlar
+      const rows = q.options.map((opt) => [
+        sanitizeText(opt.option_text) + (opt.is_correct ? "  ✓" : "")
+      ]);
+
+      autoTable.default(doc, {
+        startY: y,
+        body: rows,
+        styles: { fontSize: 10, halign: "left", cellPadding: 2 },
+        theme: "grid",
+        margin: { left: margin, right: margin },
+        pageBreak: "auto",
       });
 
-      y += 6;
+      if (doc.lastAutoTable?.finalY) {
+        y = doc.lastAutoTable.finalY + 8;
+      }
     });
 
     const pageCount = doc.internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       doc.setFontSize(10);
-      doc.setTextColor(150);
-      doc.text(`Sahifa ${i} / ${pageCount}`, pageWidth - margin, pageHeight - 10, { align: "right" });
+      doc.setTextColor(100);
+      doc.text(`Sahifa ${i} / ${pageCount}`, 200, pageHeight - 5, { align: "right" });
     }
 
     doc.save(`savollar-${date}.pdf`);
