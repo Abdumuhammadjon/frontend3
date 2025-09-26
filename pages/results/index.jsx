@@ -184,15 +184,19 @@ const GroupedQuestions = ({ subjectId }) => {
         sanitizeText(opt.option_text) + (opt.is_correct ? "  ✓" : ""),
       ]);
 
-    autoTable(doc, {
-  startY: y,
-  body: rows,
-  styles: { font: "NotoSans", fontSize: 10 },
-  theme: "grid",
-  margin: { left: margin, right: margin },
-  tableWidth: 'wrap', // albom shaklida moslashadi
-});
-
+      autoTable(doc, {
+        startY: y,
+        body: rows,
+        styles: {
+          font: "NotoSans",
+          fontSize: 10,
+          halign: "left",
+          cellPadding: 2,
+        },
+        theme: "grid",
+        margin: { left: margin, right: margin },
+        pageBreak: "auto",
+      });
 
       if (doc.lastAutoTable && doc.lastAutoTable.finalY) {
         y = doc.lastAutoTable.finalY + 8;
