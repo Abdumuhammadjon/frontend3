@@ -1,10 +1,12 @@
+ // frontend/pages/GroupedQuestions.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/router';
 import { Menu, Home, Users, BarChart, Settings, LogOut, Trash2 } from 'lucide-react';
 
-// Matnni tozalash funksiyasi (apostrof va o'xshash belgilar uchun)
-
+// PDF uchun kutubxonalar
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const GroupedQuestions = ({ subjectId }) => {
   const [groupedQuestions, setGroupedQuestions] = useState({});
@@ -17,16 +19,18 @@ const GroupedQuestions = ({ subjectId }) => {
 
   const router = useRouter();
 
+  // Matnni tozalash
   const sanitizeText = (text) => {
-  if (!text) return text;
-  return text
-    .replace(/'/g, "ʼ")   // oddiy apostrofni o‘zgartirish (o‘rniga oʻxshash unicode belgisi)
-    .replace(/"/g, "”")   // qo‘shtirnoqni o‘zgartirish
-    .replace(/`/g, "´");  // backtickni o‘zgartirish
-};
+    if (!text) return text;
+    return text
+      .replace(/'/g, "ʼ")
+      .replace(/"/g, "”")
+      .replace(/`/g, "´");
+  };
 
+  // Boshlang‘ich yuklash
   useEffect(() => {
-    const storedSubjectId = localStorage.getItem("subjectId");
+    const storedSubjectId = typeof window !== "undefined" ? localStorage.getItem("subjectId") : null;
     const idToUse = subjectId || storedSubjectId;
 
     if (!idToUse) {
@@ -35,14 +39,16 @@ const GroupedQuestions = ({ subjectId }) => {
       setIsLoggedIn(true);
       fetchQuestions(idToUse);
     }
-  }, [subjectId, router]);
+  }, [subjectId]);
 
+  // Scrollni tepasiga qaytarish
   useEffect(() => {
     if (contentRef.current) {
       contentRef.current.scrollTop = 0;
     }
   }, [groupedQuestions, selectedDate]);
 
+  // Savollarni olish
   const fetchQuestions = async (idToUse) => {
     setLoading(true);
     try {
@@ -61,12 +67,13 @@ const GroupedQuestions = ({ subjectId }) => {
       setGroupedQuestions(grouped);
       setError(null);
     } catch (err) {
-      setError(err.response?.data?.error || "Savollarni yuklashda xatolik");
+      setError((err.response && err.response.data && err.response.data.error) || "Savollarni yuklashda xatolik");
     } finally {
       setLoading(false);
     }
   };
 
+  // Savolni o‘chirish
   const handleDeleteQuestion = async (questionId, date) => {
     if (!window.confirm("Bu savolni o'chirishni xohlaysizmi?")) return;
 
@@ -84,26 +91,20 @@ const GroupedQuestions = ({ subjectId }) => {
       });
       setError(null);
     } catch (err) {
-      setError(err.response?.data?.error || "Savolni o'chirishda xatolik");
+      setError((err.response && err.response.data && err.response.data.error) || "Savolni o'chirishda xatolik");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSubjectClick = () => {
-    router.push("/questions");
-  };
+  // Sahifalararo o‘tish
+  const handleSubjectClick = () => router.push("/questions");
+  const handleResultClick = () => router.push("/results");
+  const handleUserResultsClick = () => router.push("/UserResults");
 
-  const handleResultClick = () => {
-    router.push("/results");
-  };
-
-  const handleUserResultsClick = () => {
-    router.push("/UserResults");
-  };
-
+  // Chiqish
   const handleLogout = () => {
-    document.cookie.split(";").forEach(function(cookie) {
+    document.cookie.split(";").forEach(function (cookie) {
       const name = cookie.split("=")[0].trim();
       document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
     });
@@ -114,6 +115,7 @@ const GroupedQuestions = ({ subjectId }) => {
     router.push('/Login');
   };
 
+  // Sanani formatlash
   const formatDate = (dateStr) => {
     return new Date(dateStr).toLocaleDateString('uz-UZ', {
       year: 'numeric',
@@ -122,103 +124,91 @@ const GroupedQuestions = ({ subjectId }) => {
     });
   };
 
+  // PDF yuklab olish
   const handleDownloadPDFByDate = (date) => {
     const questions = groupedQuestions[date];
     if (!questions || questions.length === 0) return;
 
-    Promise.all([
-      import("jspdf"),
-      import("jspdf-autotable")
-    ]).then(([{ jsPDF }, autoTable]) => {
-      const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
-      const pageHeight = doc.internal.pageSize.height;
-      const margin = 15;
-      let y = margin + 10;
+    const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+    const pageHeight = doc.internal.pageSize.height;
+    const margin = 15;
+    let y = margin + 10;
 
-      // Sarlavha
-      doc.setFontSize(16);
-      doc.setTextColor(40, 60, 120);
-      doc.text(`📘 Savollar to'plami (${formatDate(date)})`, 105, margin, { align: "center" });
-      y += 10;
+    doc.setFontSize(16);
+    doc.setTextColor(40, 60, 120);
+    doc.text(`📘 Savollar to'plami (${formatDate(date)})`, 105, margin, { align: "center" });
+    y += 10;
 
-      questions.forEach((q, index) => {
-        doc.setFontSize(12);
-        doc.setTextColor(0, 0, 0);
+    questions.forEach((q, index) => {
+      doc.setFontSize(12);
+      doc.setTextColor(0, 0, 0);
 
-        // Savol matnini tozalash
-        const questionText = sanitizeText(`${index + 1}. ${q.question_text}`);
+      const questionText = sanitizeText((index + 1) + ". " + q.question_text);
+      const splitText = doc.splitTextToSize(questionText, 170);
+      const neededHeight = splitText.length * 6;
 
-        // Matnni qatorlarga bo'lish (170 mm kenglikda)
-        const splitText = doc.splitTextToSize(questionText, 170);
-        const neededHeight = splitText.length * 6;
-
-        if (y + neededHeight > pageHeight - margin) {
-          doc.addPage();
-          y = margin;
-        }
-
-        doc.text(splitText, margin, y);
-        y += neededHeight + 3;
-
-        // Variantlar uchun ma'lumotlar
-        const rows = q.options.map((opt) => [
-          sanitizeText(opt.option_text) + (opt.is_correct ? "  ✓" : "")
-        ]);
-
-        autoTable.default(doc, {
-          startY: y,
-          body: rows,
-          styles: { fontSize: 10, halign: "left", cellPadding: 2 },
-          theme: "grid",
-          margin: { left: margin, right: margin },
-          pageBreak: "auto",
-        });
-
-        if (doc.lastAutoTable?.finalY) {
-          y = doc.lastAutoTable.finalY + 8;
-        }
-      });
-
-      const pageCount = doc.internal.getNumberOfPages();
-      for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.setFontSize(10);
-        doc.setTextColor(100);
-        doc.text(`Sahifa ${i} / ${pageCount}`, 200, pageHeight - 5, { align: "right" });
+      if (y + neededHeight > pageHeight - margin) {
+        doc.addPage();
+        y = margin;
       }
 
-      doc.save(`savollar-${date}.pdf`);
+      doc.text(splitText, margin, y);
+      y += neededHeight + 3;
+
+      const rows = q.options.map((opt) => [
+        sanitizeText(opt.option_text) + (opt.is_correct ? "  ✓" : "")
+      ]);
+
+      autoTable(doc, {
+        startY: y,
+        body: rows,
+        styles: { fontSize: 10, halign: "left", cellPadding: 2 },
+        theme: "grid",
+        margin: { left: margin, right: margin },
+        pageBreak: "auto",
+      });
+
+      if (doc.lastAutoTable && doc.lastAutoTable.finalY) {
+        y = doc.lastAutoTable.finalY + 8;
+      }
     });
+
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text(`Sahifa ${i} / ${pageCount}`, 200, pageHeight - 5, { align: "right" });
+    }
+
+    doc.save(`savollar-${date}.pdf`);
   };
 
   return (
     <div className="flex flex-col h-auto bg-gray-100">
-      {/* 🔥 Loader Overlay */}
       {loading && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[9999]">
           <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
         </div>
       )}
 
-      {/* Navbar */}
       <div className="bg-white shadow-md h-16 flex items-center px-6 fixed w-full z-50 top-0">
         <h1 className="text-2xl font-bold text-gray-800">Savollar Bazasi</h1>
       </div>
 
       <div className="flex flex-1 pt-16">
-        {/* Sidebar */}
         <div className={`bg-gray-900 text-white fixed h-[calc(100vh-4rem)] p-5 top-16 transition-all duration-300 ${isSidebarOpen ? "w-64" : "w-20"} z-40 overflow-y-auto`}>
           <button className="text-white mb-6" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
             <Menu size={24} />
           </button>
           <ul className="space-y-4">
-            <li className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer" onClick={handleSubjectClick}>
+            <li onClick={handleSubjectClick} className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer">
               <Home size={24} /> {isSidebarOpen && "Bosh sahifa"}
             </li>
-            <li className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer" onClick={handleResultClick}>
+            <li onClick={handleResultClick} className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer">
               <Users size={24} /> {isSidebarOpen && "Foydalanuvchilar"}
             </li>
-            <li className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer" onClick={handleUserResultsClick}>
+            <li onClick={handleUserResultsClick} className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer">
               <BarChart size={24} /> {isSidebarOpen && "Hisobotlar"}
             </li>
             <li className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer">
@@ -226,14 +216,13 @@ const GroupedQuestions = ({ subjectId }) => {
             </li>
             <br /><br />
             {isLoggedIn && (
-              <li className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer" onClick={handleLogout}>
+              <li onClick={handleLogout} className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer">
                 <LogOut size={24} /> {isSidebarOpen && "Chiqish"}
               </li>
             )}
           </ul>
         </div>
 
-        {/* Main Content */}
         <div ref={contentRef} className={`flex-1 p-6 transition-all duration-300 ${isSidebarOpen ? "ml-64" : "ml-20"} overflow-y-auto h-[calc(100vh-4rem)]`}>
           {error ? (
             <div className="text-center p-4 text-red-600 bg-red-100 rounded-lg shadow-md">
