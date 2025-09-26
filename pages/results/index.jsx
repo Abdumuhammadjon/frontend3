@@ -1,4 +1,10 @@
+
+import autoTable from "jspdf-autotable";
+import font from "@/fonts/NotoSans"; // Base64 kodlangan font js fayl
 import { jsPDF } from "jspdf";
+import { registerNotoSans } from "@/utils/pdfFont";
+
+
 
  // frontend/pages/GroupedQuestions.jsx
 import React, { useState, useEffect, useRef } from 'react';
@@ -128,76 +134,43 @@ const GroupedQuestions = ({ subjectId }) => {
 
 
 
+
+// Fontni qo'shish
+const addCustomFont = (doc) => {
+  doc.addFileToVFS("NotoSans.ttf", font);
+  doc.addFont("NotoSans.ttf", "NotoSans", "normal");
+  doc.setFont("NotoSans");
+};
+
 const handleDownloadPDFByDate = (date) => {
   const questions = groupedQuestions[date];
   if (!questions || questions.length === 0) return;
 
   const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
-  const pageHeight = doc.internal.pageSize.height;
-  const margin = 15;
-  let y = margin + 10;
 
-  // Title
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(14);
-  doc.setTextColor(40, 60, 120);
-  doc.text(`📘 Savollar to'plami (${formatDate(date)})`, 105, margin, { align: "center" });
+  // ✅ Fontni ulash
+  registerNotoSans(doc);
+  doc.setFont("NotoSans", "normal"); // default font sifatida o‘rnatish
+  doc.setFontSize(12);
+
+  let y = 20; // boshi
+  doc.text(`Savollar (${date})`, 15, y);
   y += 10;
 
   questions.forEach((q, index) => {
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(11);
-    doc.setTextColor(0, 0, 0);
+    const questionText = `${index + 1}. ${q.question}`;
+    const splitText = doc.splitTextToSize(questionText, 180); // matnni avtomatik bo‘lish
+    doc.text(splitText, 15, y);
+    y += splitText.length * 7; // joy tashlash
 
-    // Savol matni (sahifadan chiqmasligi uchun bo‘lib yozamiz)
-    const questionText = sanitizeText((index + 1) + ". " + q.question_text);
-    const splitText = doc.splitTextToSize(questionText, 180);
-    const neededHeight = splitText.length * 5;
-
-    if (y + neededHeight > pageHeight - margin) {
+    if (y > 270) {
       doc.addPage();
-      y = margin;
+      y = 20;
+      doc.setFont("NotoSans", "normal");
     }
-
-    doc.text(splitText, margin, y);
-    y += neededHeight + 2;
-
-    // Variantlar (jadvalsiz)
-    q.options.forEach((opt) => {
-      const optionText = sanitizeText(opt.option_text);
-
-      if (y + 6 > pageHeight - margin) {
-        doc.addPage();
-        y = margin;
-      }
-
-      if (opt.is_correct) {
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(0, 120, 0); // yashil
-      } else {
-        doc.setFont("helvetica", "normal");
-        doc.setTextColor(0, 0, 0); // qora
-      }
-
-      const optSplit = doc.splitTextToSize(optionText, 170);
-      doc.text(optSplit, margin + 5, y);
-      y += optSplit.length * 5;
-    });
-
-    y += 4; // savollar orasiga bo‘sh joy
   });
 
-  // Sahifa raqamlari
-  const pageCount = doc.internal.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(100);
-    doc.text(`Sahifa ${i} / ${pageCount}`, 200, pageHeight - 5, { align: "right" });
-  }
-
-  doc.save(`savollar-${date}.pdf`);
+  doc.save(`savollar_${date}.pdf`);
 };
 
 
