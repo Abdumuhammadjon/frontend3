@@ -125,64 +125,80 @@ const GroupedQuestions = ({ subjectId }) => {
   };
 
   // PDF yuklab olish
-  const handleDownloadPDFByDate = (date) => {
-    const questions = groupedQuestions[date];
-    if (!questions || questions.length === 0) return;
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 
-    const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
-    const pageHeight = doc.internal.pageSize.height;
-    const margin = 15;
-    let y = margin + 10;
+const handleDownloadPDFByDate = (date) => {
+  const questions = groupedQuestions[date];
+  if (!questions || questions.length === 0) return;
 
-    doc.setFontSize(16);
-    doc.setTextColor(40, 60, 120);
-    doc.text(`📘 Savollar to'plami (${formatDate(date)})`, 105, margin, { align: "center" });
-    y += 10;
+  const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+  const pageHeight = doc.internal.pageSize.height;
+  const margin = 15;
+  let y = margin + 10;
 
-    questions.forEach((q, index) => {
-      doc.setFontSize(12);
-      doc.setTextColor(0, 0, 0);
+  // Title
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.setTextColor(40, 60, 120);
+  doc.text(`📘 Savollar to'plami (${formatDate(date)})`, 105, margin, { align: "center" });
+  y += 10;
 
-      const questionText = sanitizeText((index + 1) + ". " + q.question_text);
-      const splitText = doc.splitTextToSize(questionText, 170);
-      const neededHeight = splitText.length * 6;
+  questions.forEach((q, index) => {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
 
-      if (y + neededHeight > pageHeight - margin) {
-        doc.addPage();
-        y = margin;
-      }
+    // ✅ Savol matni uzun bo‘lsa ham sahifadan chiqmaydi
+    const questionText = sanitizeText((index + 1) + ". " + q.question_text);
+    const splitText = doc.splitTextToSize(questionText, 180); // 180mm -> sahifa ichida qoladi
+    const neededHeight = splitText.length * 6;
 
-      doc.text(splitText, margin, y);
-      y += neededHeight + 3;
-
-      const rows = q.options.map((opt) => [
-        sanitizeText(opt.option_text) + (opt.is_correct ? "  ✓" : "")
-      ]);
-
-      autoTable(doc, {
-        startY: y,
-        body: rows,
-        styles: { fontSize: 10, halign: "left", cellPadding: 2 },
-        theme: "grid",
-        margin: { left: margin, right: margin },
-        pageBreak: "auto",
-      });
-
-      if (doc.lastAutoTable && doc.lastAutoTable.finalY) {
-        y = doc.lastAutoTable.finalY + 8;
-      }
-    });
-
-    const pageCount = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(10);
-      doc.setTextColor(100);
-      doc.text(`Sahifa ${i} / ${pageCount}`, 200, pageHeight - 5, { align: "right" });
+    if (y + neededHeight > pageHeight - margin) {
+      doc.addPage();
+      y = margin;
     }
 
-    doc.save(`savollar-${date}.pdf`);
-  };
+    doc.text(splitText, margin, y);
+    y += neededHeight + 3;
+
+    // ✅ Variantlar (jadval ko‘rinishida)
+    const rows = q.options.map((opt) => [
+      {
+        content: sanitizeText(opt.option_text),
+        styles: opt.is_correct
+          ? { fontStyle: "bold", textColor: [0, 100, 0] } // ✅ To‘g‘ri javob qalin yashil
+          : { fontStyle: "normal", textColor: [0, 0, 0] },
+      },
+    ]);
+
+    autoTable(doc, {
+      startY: y,
+      body: rows,
+      styles: { fontSize: 11, halign: "left", cellPadding: 2, cellWidth: "wrap" },
+      theme: "grid",
+      margin: { left: margin, right: margin },
+      pageBreak: "auto",
+    });
+
+    if (doc.lastAutoTable && doc.lastAutoTable.finalY) {
+      y = doc.lastAutoTable.finalY + 8;
+    }
+  });
+
+  // ✅ Har bir sahifa raqamini chiqarish
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Sahifa ${i} / ${pageCount}`, 200, pageHeight - 5, { align: "right" });
+  }
+
+  doc.save(`savollar-${date}.pdf`);
+};
+
 
   return (
     <div className="flex flex-col h-auto bg-gray-100">
