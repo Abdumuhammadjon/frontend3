@@ -144,7 +144,7 @@ const GroupedQuestions = ({ subjectId }) => {
   const handleDownloadPDFByDate = (date, questions) => {
     if (!questions || questions.length === 0) return;
 
-    const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+    const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
     const pageHeight = doc.internal.pageSize.height;
     const pageWidth = doc.internal.pageSize.width;
     const margin = 15;
@@ -154,7 +154,7 @@ const GroupedQuestions = ({ subjectId }) => {
     addCustomFont(doc);
 
     // 🔹 Sarlavha
-    doc.setFontSize(16);
+    doc.setFontSize(10);
     doc.setTextColor(40, 60, 120);
     doc.text(`📘 Savollar to‘plami (${date})`, pageWidth / 2, margin, {
       align: "center",
@@ -167,7 +167,7 @@ const GroupedQuestions = ({ subjectId }) => {
       doc.setTextColor(0, 0, 0);
 
       const questionText = sanitizeText(`${index + 1}. ${q.question_text}`);
-      const splitText = doc.splitTextToSize(questionText, 170);
+      const splitText = doc.splitTextToSize(questionText, 150);
       const neededHeight = splitText.length * 6;
 
       if (y + neededHeight > pageHeight - margin) {
