@@ -104,13 +104,14 @@ const handleDownloadPDFByDate = async (date) => {
 
     item.options.forEach((option, i) => {
       y -= 20;
-      page.drawText(`   ${String.fromCharCode(97 + i)}) ${option.option_text}`, {
-        x: 70,
-        y,
-        size: 12,
-        font,
-        color: rgb(0.2, 0.2, 0.2),
-      });
+    page.drawText(`Savollar to‘plami (${date})`, {
+  x: 50,
+  y,
+  size: 18,
+  font,
+  color: rgb(0, 0, 0),
+});
+
     });
   });
 
