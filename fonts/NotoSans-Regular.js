@@ -1,3 +1,3 @@
-const font = "BASE64_ENCODED_STRING_HERE";
+const font = "PASTE_YOUR_BASE64_STRING_HERE";
 
 export default font;
