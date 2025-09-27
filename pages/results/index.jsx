@@ -1,19 +1,7 @@
-// frontend/pages/GroupedQuestions.jsx
-
-import React, { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/router";
-import axios from "axios";
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
-import {
-  Menu,
-  Home,
-  Users,
-  BarChart,
-  Settings,
-  LogOut,
-  Trash2,
-} from "lucide-react";
+import React, { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
+import { useRouter } from 'next/router';
+import { Menu, Home, Users, BarChart, Settings, LogOut, Trash2 } from 'lucide-react';
 
 const GroupedQuestions = ({ subjectId }) => {
   const [groupedQuestions, setGroupedQuestions] = useState({});
@@ -23,139 +11,20 @@ const GroupedQuestions = ({ subjectId }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const contentRef = useRef(null);
+
   const router = useRouter();
 
-  // === UTILITIES ===
-
-  const sanitizeText = (text) =>
-    text
-      ?.replace(/'/g, "ʼ")
-      .replace(/"/g, "”")
-      .replace(/`/g, "´") || "";
-
-  const splitTextByWords = (text, maxWords = 6) => {
-    const words = text.split(" ");
-    const lines = [];
-    for (let i = 0; i < words.length; i += maxWords) {
-      lines.push(words.slice(i, i + maxWords).join(" "));
-    }
-    return lines;
-  };
-
-  const formatDate = (dateStr) =>
-    new Date(dateStr).toLocaleDateString("uz-UZ", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-
-  const groupByDate = (data) =>
-    data.reduce((acc, question) => {
-      const date = new Date(question.created_at).toISOString().split("T")[0];
-      acc[date] = acc[date] || [];
-      acc[date].push(question);
-      return acc;
-    }, {});
-
-const generateQuestionPDF = (date, questions) => {
-  if (!questions?.length) return;
-
-  const doc = new jsPDF({
-    unit: "mm",
-    format: "a4",
-    orientation: "portrait",
-  });
-
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 20;
-  let y = margin;
-
-  // Header
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(14);
-  doc.setTextColor(33, 33, 33);
-  doc.text(`📘 Savollar to‘plami (${date})`, pageWidth / 2, y, {
-    align: "center",
-  });
-  y += 10;
-
-  questions.forEach((q, index) => {
-    const questionLines = splitTextByWords(
-      sanitizeText(`${index + 1}. ${q.question_text}`),
-      10
-    );
-    const lineHeight = 7;
-    const questionHeight = questionLines.length * lineHeight + 5;
-
-    // Yangi sahifa kerak bo‘lsa
-    if (y + questionHeight + 30 > pageHeight - margin) {
-      doc.addPage();
-      y = margin;
-    }
-
-    // 🔹 Savol matni
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-    doc.setTextColor(0, 0, 0);
-    questionLines.forEach((line) => {
-      doc.text(line, margin, y);
-      y += lineHeight;
-    });
-
-    y += 2;
-
-    // 🔸 Variantlar (ichkariga surilgan, ajratilgan)
-    q.options.forEach((opt, idx) => {
-      const prefix = String.fromCharCode(65 + idx); // A, B, C...
-      const isCorrect = opt.is_correct ? " ✓" : "";
-      const optionText = `${prefix}) ${sanitizeText(opt.option_text)}${isCorrect}`;
-
-      doc.setFont("helvetica", opt.is_correct ? "bold" : "normal");
-      doc.setFontSize(11);
-      doc.setTextColor(opt.is_correct ? "green" : "#333");
-
-      doc.text(optionText, margin + 8, y);
-      y += 6;
-    });
-
-    // 🔻 Savollarni ajratish uchun chiziq yoki bo‘sh joy
-    y += 4;
-    doc.setDrawColor(180);
-    doc.setLineWidth(0.3);
-    doc.line(margin, y, pageWidth - margin, y); // chiziq
-    y += 6;
-  });
-
-  // Footer: sahifa raqami
-  const pageCount = doc.internal.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    doc.setFontSize(9);
-    doc.setTextColor(100);
-    doc.text(`Sahifa ${i} / ${pageCount}`, pageWidth - margin, pageHeight - 10, {
-      align: "right",
-    });
-  }
-
-  doc.save(`savollar-${date}.pdf`);
-};
-
-
-  // === LIFECYCLE ===
-
   useEffect(() => {
-    const storedSubjectId =
-      typeof window !== "undefined" ? localStorage.getItem("subjectId") : null;
+    const storedSubjectId = localStorage.getItem("subjectId");
     const idToUse = subjectId || storedSubjectId;
 
     if (!idToUse) {
-      router.push("/Login");
+      router.push('/Login');
     } else {
       setIsLoggedIn(true);
       fetchQuestions(idToUse);
     }
-  }, [subjectId]);
+  }, [subjectId, router]);
 
   useEffect(() => {
     if (contentRef.current) {
@@ -163,18 +32,25 @@ const generateQuestionPDF = (date, questions) => {
     }
   }, [groupedQuestions, selectedDate]);
 
-  // === API ===
-
   const fetchQuestions = async (idToUse) => {
     setLoading(true);
     try {
-      const response = await axios.get(
-        `https://backed1.onrender.com/api/subject/${idToUse}`
-      );
-      setGroupedQuestions(groupByDate(response.data));
+      const response = await axios.get(`https://backed1.onrender.com/api/subject/${idToUse}`, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = response.data;
+
+      const grouped = data.reduce((acc, question) => {
+        const date = new Date(question.created_at).toISOString().split('T')[0];
+        if (!acc[date]) acc[date] = [];
+        acc[date].push(question);
+        return acc;
+      }, {});
+
+      setGroupedQuestions(grouped);
       setError(null);
     } catch (err) {
-      setError("Savollarni yuklashda xatolik");
+      setError(err.response?.data?.error || "Savollarni yuklashda xatolik");
     } finally {
       setLoading(false);
     }
@@ -182,176 +58,227 @@ const generateQuestionPDF = (date, questions) => {
 
   const handleDeleteQuestion = async (questionId, date) => {
     if (!window.confirm("Bu savolni o'chirishni xohlaysizmi?")) return;
-    setLoading(true);
+
     try {
-      await axios.delete(
-        `https://backed1.onrender.com/api/question/${questionId}`
-      );
+      setLoading(true);
+      await axios.delete(`https://backed1.onrender.com/api/question/${questionId}`, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+
       setGroupedQuestions((prev) => {
         const updated = { ...prev };
         updated[date] = updated[date].filter((q) => q.id !== questionId);
         if (updated[date].length === 0) delete updated[date];
         return updated;
       });
+      setError(null);
     } catch (err) {
-      setError("Savolni o'chirishda xatolik");
+      setError(err.response?.data?.error || "Savolni o'chirishda xatolik");
     } finally {
       setLoading(false);
     }
   };
 
-  // === NAVIGATION ===
+  const handleSubjectClick = () => {
+    router.push("/questions");
+  };
 
-  const handleSubjectClick = () => router.push("/questions");
-  const handleResultClick = () => router.push("/results");
-  const handleUserResultsClick = () => router.push("/UserResults");
+  const handleResultClick = () => {
+    router.push("/results");
+  };
+
+  const handleUserResultsClick = () => {
+    router.push("/UserResults");
+  };
 
   const handleLogout = () => {
-    document.cookie.split(";").forEach((cookie) => {
+    document.cookie.split(";").forEach(function(cookie) {
       const name = cookie.split("=")[0].trim();
-      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+      document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
     });
+
     localStorage.clear();
     sessionStorage.clear();
     setIsLoggedIn(false);
-    router.push("/Login");
+    router.push('/Login');
   };
 
-  // === UI ===
+  const formatDate = (dateStr) => {
+    return new Date(dateStr).toLocaleDateString('uz-UZ', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
+const handleDownloadPDFByDate = (date) => {
+  const questions = groupedQuestions[date];
+  if (!questions || questions.length === 0) return;
+
+  Promise.all([
+    import("jspdf"),
+    import("jspdf-autotable")
+  ]).then(([{ jsPDF }, autoTable]) => {
+    const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
+    const pageHeight = doc.internal.pageSize.height;
+    const margin = 15;
+    let y = margin + 10;
+
+    // Sarlavha
+    doc.setFontSize(16);
+    doc.setTextColor(40, 60, 120);
+    doc.text(`📘 Savollar to'plami (${formatDate(date)})`, doc.internal.pageSize.getWidth() / 2, margin, { align: "center" });
+    y += 10;
+
+    questions.forEach((q, index) => {
+      doc.setFontSize(12);
+      doc.setTextColor(0, 0, 0);
+
+      const questionText = `${index + 1}. ${q.question_text}`;
+      const splitQuestionText = doc.splitTextToSize(questionText, 260);
+      const questionHeight = splitQuestionText.length * 6;
+
+      if (y + questionHeight > pageHeight - margin) {
+        doc.addPage();
+        y = margin;
+      }
+
+      doc.text(splitQuestionText, margin, y);
+      y += questionHeight + 3;
+
+      q.options.forEach(opt => {
+        const optionText = (opt.is_correct ? "✓ " : "") + opt.option_text;
+        const splitOptionText = doc.splitTextToSize(optionText, 260);
+        const optionHeight = splitOptionText.length * 6;
+
+        if (y + optionHeight > pageHeight - margin) {
+          doc.addPage();
+          y = margin;
+        }
+
+        doc.text("•", margin + 5, y);
+        doc.text(splitOptionText, margin + 10, y);
+        y += optionHeight + 2;
+      });
+
+      y += 5;
+    });
+
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text(`Sahifa ${i} / ${pageCount}`, doc.internal.pageSize.getWidth() - margin, pageHeight - 5, { align: "right" });
+    }
+
+    doc.save(`savollar-${date}.pdf`);
+  });
+};
+
+
 
   return (
     <div className="flex flex-col h-auto bg-gray-100">
+      {/* 🔥 Loader Overlay */}
       {loading && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[9999]">
           <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
         </div>
       )}
 
-      {/* HEADER */}
+      {/* Navbar */}
       <div className="bg-white shadow-md h-16 flex items-center px-6 fixed w-full z-50 top-0">
         <h1 className="text-2xl font-bold text-gray-800">Savollar Bazasi</h1>
       </div>
 
       <div className="flex flex-1 pt-16">
-        {/* SIDEBAR */}
-        <div
-          className={`bg-gray-900 text-white fixed h-[calc(100vh-4rem)] p-5 top-16 transition-all duration-300 ${
-            isSidebarOpen ? "w-64" : "w-20"
-          } z-40 overflow-y-auto`}
-        >
-          <button
-            type="button"
-            aria-label="Menyuni ochish"
-            className="text-white mb-6"
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          >
+        {/* Sidebar */}
+        <div className={`bg-gray-900 text-white fixed h-[calc(100vh-4rem)] p-5 top-16 transition-all duration-300 ${isSidebarOpen ? "w-64" : "w-20"} z-40 overflow-y-auto`}>
+          <button className="text-white mb-6" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
             <Menu size={24} />
           </button>
           <ul className="space-y-4">
-            <li
-              onClick={handleSubjectClick}
-              className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer"
-            >
+            <li className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer" onClick={handleSubjectClick}>
               <Home size={24} /> {isSidebarOpen && "Bosh sahifa"}
             </li>
-            <li
-              onClick={handleResultClick}
-              className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer"
-            >
+            <li className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer" onClick={handleResultClick}>
               <Users size={24} /> {isSidebarOpen && "Foydalanuvchilar"}
             </li>
-            <li
-              onClick={handleUserResultsClick}
-              className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer"
-            >
+            <li className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer" onClick={handleUserResultsClick}>
               <BarChart size={24} /> {isSidebarOpen && "Hisobotlar"}
             </li>
             <li className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer">
               <Settings size={24} /> {isSidebarOpen && "Sozlamalar"}
             </li>
-            <br />
-            <br />
+            <br /><br />
             {isLoggedIn && (
-              <li
-                onClick={handleLogout}
-                className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer"
-              >
+              <li className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer" onClick={handleLogout}>
                 <LogOut size={24} /> {isSidebarOpen && "Chiqish"}
               </li>
             )}
           </ul>
         </div>
 
-        {/* CONTENT */}
-        <div
-          ref={contentRef}
-          className={`flex-1 p-6 transition-all duration-300 ${
-            isSidebarOpen ? "ml-64" : "ml-20"
-          } overflow-y-auto h-[calc(100vh-4rem)]`}
-        >
+        {/* Main Content */}
+        <div ref={contentRef} className={`flex-1 p-6 transition-all duration-300 ${isSidebarOpen ? "ml-64" : "ml-20"} overflow-y-auto h-[calc(100vh-4rem)]`}>
           {error ? (
             <div className="text-center p-4 text-red-600 bg-red-100 rounded-lg shadow-md">
               Xatolik: {error}
             </div>
           ) : (
-            <div className="max-w-4xl mx-auto space-y-6 overflow-y-auto">
-              {Object.keys(groupedQuestions)
-                .sort()
-                .map((date) => (
-                  <div key={date} className="mb-4 w-full">
-                    <button
-                      onClick={() =>
-                        setSelectedDate(selectedDate === date ? null : date)
-                      }
-                      className="w-full text-left bg-blue-600 hover:bg-blue-700 rounded-md p-3 font-semibold text-white"
-                    >
-                      {formatDate(date)}
-                    </button>
+            <div className="max-w-4xl mx-auto space-y-6 h-[calc(100vh-16rem)] overflow-y-auto -webkit-overflow-scrolling-touch">
+              {Object.keys(groupedQuestions).sort().map((date) => (
+                <div key={date} className="mb-4 w-full">
+                  <button
+                    onClick={() => setSelectedDate(selectedDate === date ? null : date)}
+                    className="w-full bg-blue-500 text-white px-6 py-3 rounded-lg shadow-md hover:bg-blue-600 transition-colors duration-200"
+                  >
+                    {formatDate(date)}
+                  </button>
+                  {selectedDate === date && (
+                    <div className="mt-2 p-4 bg-white rounded-lg shadow-md">
+                      <button
+                        onClick={() => handleDownloadPDFByDate(date)}
+                        className="mb-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-md hover:bg-green-600 transition-colors duration-200"
+                      >
+                        📄 Ushbu to‘plamni PDF’da yuklab olish
+                      </button>
 
-                    {selectedDate === date && (
-                      <div className="p-4 bg-white rounded-md shadow-md mt-3 max-h-[60vh] overflow-auto">
-                        {groupedQuestions[date].map((question) => (
-                          <div
-                            key={question.id}
-                            className="mb-4 border-b border-gray-300 pb-2"
-                          >
-                            <p className="font-semibold">
-                              {sanitizeText(question.question_text)}
-                            </p>
-                            <ul className="list-disc ml-5 mt-1">
-                              {question.options.map((option, idx) => (
+                      {groupedQuestions[date].map((question, index) => (
+                        <div key={index} className="mb-4 border-b pb-2 last:border-b-0">
+                          <div className="flex justify-between items-center mb-2">
+                            <p className="text-gray-600 font-medium">Savol:</p>
+                            <button
+                              onClick={() => handleDeleteQuestion(question.id, date)}
+                              className="text-red-600 hover:text-red-800 transition-colors duration-200"
+                              title="Savolni o'chirish"
+                            >
+                              <Trash2 size={20} />
+                            </button>
+                          </div>
+                          <div className="p-3 bg-gray-50 rounded-lg">
+                            <p className="font-bold text-gray-900">{question.question_text}</p>
+                            <ul className="mt-2 space-y-2">
+                              {question.options.map((option) => (
                                 <li
-                                  key={idx}
-                                  className={`${
-                                    option.is_correct ? "text-green-600" : ""
-                                  }`}
+                                  key={option.id}
+                                  className={`p-2 rounded-lg ${option.is_correct ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-800'}`}
                                 >
-                                  {sanitizeText(option.option_text)}
+                                  {option.option_text}
+                                  {option.is_correct && (
+                                    <span className="ml-2 text-green-600 font-medium">✓</span>
+                                  )}
                                 </li>
                               ))}
                             </ul>
-                            <button
-                              onClick={() =>
-                                handleDeleteQuestion(question.id, date)
-                              }
-                              className="mt-2 text-red-600 hover:underline flex gap-1 items-center"
-                            >
-                              <Trash2 size={16} /> Savolni o'chirish
-                            </button>
                           </div>
-                        ))}
-                        <button
-                          onClick={() =>
-                            generateQuestionPDF(date, groupedQuestions[date])
-                          }
-                          className="mt-4 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-                        >
-                          PDF yuklab olish
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </div>
