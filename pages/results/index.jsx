@@ -3,6 +3,12 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/router';
 import jsPDF from 'jspdf';
+import { loadNotoSansFont } from '/fonts/NotoSans-Regular';  // Font yuklash funksiyasini import qilish
+
+// Fontni yuklash
+if (typeof window !== 'undefined') {
+  loadNotoSansFont(jsPDF);
+}
 
 // Custom font js faylini public/fonts dan import qilish
 import '/fonts/NotoSans-Regular.js';  // public/fonts/NotoSans-Regular.js
