@@ -1,6 +1,6 @@
 
 
-﻿import { jsPDF } from "jspdf"
+import { jsPDF } from "jspdf"
 var font = 'undefined';
 var callAddFont = function () {
 this.addFileToVFS('NotoSans-Regular-normal.ttf', font);
