@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/router';
 import jsPDF from 'jspdf';
-import { loadNotoSansFont } from '/fonts/NotoSans-Regular'; // Font faylining mavjudligini tekshiring
+import { loadNotoSansFont } from '../../NotoSansFont'
 
 const GroupedQuestions = ({ subjectId }) => {
   const [groupedQuestions, setGroupedQuestions] = useState({});
