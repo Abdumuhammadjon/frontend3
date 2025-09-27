@@ -1,5 +1,5 @@
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-
+import { PDFDocument, rgb } from "pdf-lib";
+import fontkit from "@pdf-lib/fontkit";
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/router';
@@ -63,68 +63,67 @@ const GroupedQuestions = ({ subjectId }) => {
     }
   };
 
-  // 🔹 PDF yuklab olish
+  // 🔹 PDF yaratish funksiyasi
+  async function handleDownloadPDFByDate(date) {
+    const questions = groupedQuestions[date];
+    if (!questions || questions.length === 0) return;
 
+    const pdfDoc = await PDFDocument.create();
+    pdfDoc.registerFontkit(fontkit);
 
+    // Font yuklash (public/fonts/NotoSans-Regular.ttf)
+    const fontBytes = await fetch("/fonts/NotoSans-Regular.ttf").then(res => res.arrayBuffer());
+    const customFont = await pdfDoc.embedFont(fontBytes);
 
-const handleDownloadPDFByDate = async (date) => {
-  const questions = groupedQuestions[date]; // ✅ shu kunning savollar ro‘yxati (array)
+    const page = pdfDoc.addPage([842, 595]); // A4 landscape
+    const { height } = page.getSize();
+    let y = height - 50;
 
-  if (!Array.isArray(questions)) {
-    console.error("Data massiv emas:", questions);
-    return;
-  }
-
-  const pdfDoc = await PDFDocument.create();
-  const page = pdfDoc.addPage([842, 595]); // A4 landscape
-  const { height } = page.getSize();
-
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-
-  let y = height - 50;
-
-  page.drawText(`📄 Savollar to‘plami (${date})`, {
-    x: 50,
-    y,
-    size: 18,
-    font,
-    color: rgb(0, 0, 0),
-  });
-
-  // 🔹 Savollar va variantlar
-  questions.forEach((item, index) => {
-    y -= 30;
-    page.drawText(`${index + 1}. ${item.question_text}`, {
+    // Sarlavha
+    page.drawText("Savollar ro'yxati", {
       x: 50,
       y,
-      size: 14,
-      font,
+      size: 18,
+      font: customFont,
       color: rgb(0, 0, 0),
     });
 
-    item.options.forEach((option, i) => {
-      y -= 20;
-    page.drawText(`Savollar to‘plami (${date})`, {
-  x: 50,
-  y,
-  size: 18,
-  font,
-  color: rgb(0, 0, 0),
-});
+    y -= 40;
 
+    // Savollarni yozish
+    questions.forEach((q, i) => {
+      page.drawText(`${i + 1}. ${q.question_text}`, {
+        x: 50,
+        y,
+        size: 14,
+        font: customFont,
+        color: rgb(0, 0, 0),
+      });
+      y -= 25;
+
+      // Variantlar
+      q.options?.forEach((opt, idx) => {
+        page.drawText(`   ${String.fromCharCode(97 + idx)}) ${opt.option_text}${opt.is_correct ? " ✓" : ""}`, {
+          x: 70,
+          y,
+          size: 12,
+          font: customFont,
+          color: opt.is_correct ? rgb(0, 0.5, 0) : rgb(0.2, 0.2, 0.2),
+        });
+        y -= 20;
+      });
+
+      y -= 10;
     });
-  });
 
-  // 🔹 PDF saqlash
-  const pdfBytes = await pdfDoc.save();
-  const blob = new Blob([pdfBytes], { type: "application/pdf" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = `savollar-${date}.pdf`;
-  link.click();
-};
-
-
+    // PDF saqlash
+    const pdfBytes = await pdfDoc.save();
+    const blob = new Blob([pdfBytes], { type: "application/pdf" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `savollar-${date}.pdf`;
+    link.click();
+  }
 
   // 🔹 Savolni o‘chirish
   const handleDeleteQuestion = async (questionId, date) => {
@@ -232,7 +231,7 @@ const handleDownloadPDFByDate = async (date) => {
                         onClick={() => handleDownloadPDFByDate(date)}
                         className="mb-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-md hover:bg-green-600 transition-colors duration-200"
                       >
-                        📄 Ushbu to‘plamni PDF’da yuklab olish
+                        Ushbu to‘plamni PDF’da yuklab olish
                       </button>
 
                       {groupedQuestions[date].map((question, index) => (
@@ -278,4 +277,3 @@ const handleDownloadPDFByDate = async (date) => {
 };
 
 export default GroupedQuestions;
- 
