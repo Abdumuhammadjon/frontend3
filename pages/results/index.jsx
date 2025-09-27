@@ -4,7 +4,6 @@ import { useRouter } from "next/router";
 import axios from "axios";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import font from "@/fonts/NotoSans-Regular.js"; // Base64 font string import
 import { Menu, Home, Users, BarChart, Settings, LogOut, Trash2 } from "lucide-react";
 
 const GroupedQuestions = ({ subjectId }) => {
@@ -18,15 +17,19 @@ const GroupedQuestions = ({ subjectId }) => {
 
   const router = useRouter();
 
-  // Matnni tozalash (null/undefined uchun ham)
+  // Matnni tozalash
   const sanitizeText = (text) => {
-    if (!text) return "";
-    return text.replace(/'/g, "ʼ").replace(/"/g, "”").replace(/`/g, "´");
+    if (!text) return text;
+    return text
+      .replace(/'/g, "ʼ")
+      .replace(/"/g, "”")
+      .replace(/`/g, "´");
   };
 
   // Boshlang‘ich yuklash
   useEffect(() => {
-    const storedSubjectId = typeof window !== "undefined" ? localStorage.getItem("subjectId") : null;
+    const storedSubjectId =
+      typeof window !== "undefined" ? localStorage.getItem("subjectId") : null;
     const idToUse = subjectId || storedSubjectId;
 
     if (!idToUse) {
@@ -48,9 +51,11 @@ const GroupedQuestions = ({ subjectId }) => {
   const fetchQuestions = async (idToUse) => {
     setLoading(true);
     try {
-      const response = await axios.get(`https://backed1.onrender.com/api/subject/${idToUse}`, {
-        headers: { "Content-Type": "application/json" },
-      });
+      const response = await axios.get(
+        `https://backed1.onrender.com/api/subject/${idToUse}`,
+        { headers: { "Content-Type": "application/json" } }
+      );
+
       const data = response.data;
 
       const grouped = data.reduce((acc, question) => {
@@ -64,7 +69,8 @@ const GroupedQuestions = ({ subjectId }) => {
       setError(null);
     } catch (err) {
       setError(
-        (err.response && err.response.data && err.response.data.error) || "Savollarni yuklashda xatolik"
+        (err.response && err.response.data && err.response.data.error) ||
+          "Savollarni yuklashda xatolik"
       );
     } finally {
       setLoading(false);
@@ -75,11 +81,12 @@ const GroupedQuestions = ({ subjectId }) => {
   const handleDeleteQuestion = async (questionId, date) => {
     if (!window.confirm("Bu savolni o'chirishni xohlaysizmi?")) return;
 
-    setLoading(true);
     try {
-      await axios.delete(`https://backed1.onrender.com/api/question/${questionId}`, {
-        headers: { "Content-Type": "application/json" },
-      });
+      setLoading(true);
+      await axios.delete(
+        `https://backed1.onrender.com/api/question/${questionId}`,
+        { headers: { "Content-Type": "application/json" } }
+      );
 
       setGroupedQuestions((prev) => {
         const updated = { ...prev };
@@ -90,7 +97,8 @@ const GroupedQuestions = ({ subjectId }) => {
       setError(null);
     } catch (err) {
       setError(
-        (err.response && err.response.data && err.response.data.error) || "Savolni o'chirishda xatolik"
+        (err.response && err.response.data && err.response.data.error) ||
+          "Savolni o'chirishda xatolik"
       );
     } finally {
       setLoading(false);
@@ -104,9 +112,10 @@ const GroupedQuestions = ({ subjectId }) => {
 
   // Chiqish
   const handleLogout = () => {
-    document.cookie.split(";").forEach((cookie) => {
+    document.cookie.split(";").forEach(function (cookie) {
       const name = cookie.split("=")[0].trim();
-      document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+      document.cookie =
+        name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
     });
 
     localStorage.clear();
@@ -123,14 +132,7 @@ const GroupedQuestions = ({ subjectId }) => {
       day: "numeric",
     });
 
-  // Font qo'shish
-  const addCustomFont = (doc) => {
-    doc.addFileToVFS("NotoSans.ttf", font);
-    doc.addFont("NotoSans.ttf", "NotoSans", "normal");
-    doc.setFont("NotoSans");
-  };
-
-  // PDF yuklab olish
+  // PDF yuklab olish (standart font bilan)
   const handleDownloadPDFByDate = (date, questions) => {
     if (!questions || questions.length === 0) return;
 
@@ -140,16 +142,15 @@ const GroupedQuestions = ({ subjectId }) => {
     const margin = 15;
     let y = margin + 10;
 
-    // Font ulash
-    addCustomFont(doc);
-
-    // Sarlavha
+    // Standart shrift: helvetica
+    doc.setFont("helvetica");
     doc.setFontSize(10);
     doc.setTextColor(40, 60, 120);
-    doc.text(`📘 Savollar to‘plami (${date})`, pageWidth / 2, margin, { align: "center" });
+    doc.text(`📘 Savollar to‘plami (${date})`, pageWidth / 2, margin, {
+      align: "center",
+    });
     y += 10;
 
-    // Har bir savolni yozish
     questions.forEach((q, index) => {
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
@@ -175,10 +176,10 @@ const GroupedQuestions = ({ subjectId }) => {
       autoTable(doc, {
         startY: y,
         body: rows,
-        styles: { font: "NotoSans", fontSize: 10 },
+        styles: { font: "helvetica", fontSize: 10 },
         theme: "grid",
         margin: { left: margin, right: margin },
-        tableWidth: "wrap",
+        tableWidth: "wrap", // albom shaklida moslashadi
       });
 
       if (doc.lastAutoTable && doc.lastAutoTable.finalY) {
@@ -283,64 +284,51 @@ const GroupedQuestions = ({ subjectId }) => {
                       onClick={() =>
                         setSelectedDate(selectedDate === date ? null : date)
                       }
-                      className="w-full bg-blue-500 text-white px-6 py-3 rounded-lg shadow-md hover:bg-blue-600 transition-colors duration-200"
+                      className="w-full text-left bg-blue-600 hover:bg-blue-700 rounded-md p-3 font-semibold text-white"
                     >
                       {formatDate(date)}
                     </button>
+
                     {selectedDate === date && (
-                      <div className="mt-2 p-4 bg-white rounded-lg shadow-md">
+                      <div className="p-4 bg-white rounded-md shadow-md mt-3 overflow-auto max-h-96">
+                        {groupedQuestions[date].map((question) => (
+                          <div
+                            key={question.id}
+                            className="mb-4 border-b border-gray-300 pb-2"
+                          >
+                            <p className="font-semibold">
+                              {sanitizeText(question.question_text)}
+                            </p>
+                            <ul className="list-disc ml-5 mt-1">
+                              {question.options.map((option, idx) => (
+                                <li
+                                  key={idx}
+                                  className={`${
+                                    option.is_correct ? "text-green-600" : ""
+                                  }`}
+                                >
+                                  {sanitizeText(option.option_text)}
+                                </li>
+                              ))}
+                            </ul>
+                            <button
+                              onClick={() =>
+                                handleDeleteQuestion(question.id, date)
+                              }
+                              className="mt-2 text-red-600 hover:underline"
+                            >
+                              <Trash2 size={16} /> Savolni o'chirish
+                            </button>
+                          </div>
+                        ))}
                         <button
                           onClick={() =>
                             handleDownloadPDFByDate(date, groupedQuestions[date])
                           }
-                          className="mb-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-md hover:bg-green-600 transition-colors duration-200"
+                          className="mt-4 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
                         >
-                          📄 Ushbu to‘plamni PDF’da yuklab olish
+                          PDF yuklab olish
                         </button>
-
-                        {groupedQuestions[date].map((question, index) => (
-                          <div
-                            key={index}
-                            className="mb-4 border-b pb-2 last:border-b-0"
-                          >
-                            <div className="flex justify-between items-center mb-2">
-                              <p className="text-gray-600 font-medium">Savol:</p>
-                              <button
-                                onClick={() =>
-                                  handleDeleteQuestion(question.id, date)
-                                }
-                                className="text-red-600 hover:text-red-800 transition-colors duration-200"
-                                title="Savolni o'chirish"
-                              >
-                                <Trash2 size={20} />
-                              </button>
-                            </div>
-                            <div className="p-3 bg-gray-50 rounded-lg">
-                              <p className="font-bold text-gray-900">
-                                {sanitizeText(question.question_text)}
-                              </p>
-                              <ul className="mt-2 space-y-2">
-                                {question.options.map((option) => (
-                                  <li
-                                    key={option.id}
-                                    className={`p-2 rounded-lg ${
-                                      option.is_correct
-                                        ? "bg-green-100 text-green-800"
-                                        : "bg-gray-200 text-gray-800"
-                                    }`}
-                                  >
-                                    {sanitizeText(option.option_text)}
-                                    {option.is_correct && (
-                                      <span className="ml-2 text-green-600 font-medium">
-                                        ✓
-                                      </span>
-                                    )}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          </div>
-                        ))}
                       </div>
                     )}
                   </div>
