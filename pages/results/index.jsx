@@ -1,9 +1,9 @@
-// components/GroupedQuestions.jsx
+ // components/GroupedQuestions.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/router';
 import jsPDF from 'jspdf';
-import { loadNotoSansFont } from '../../NotoSansFont'
+import { loadNotoSansFont } from '../../NotoSansFont';
 
 const GroupedQuestions = ({ subjectId }) => {
   const [groupedQuestions, setGroupedQuestions] = useState({});
@@ -196,11 +196,24 @@ const GroupedQuestions = ({ subjectId }) => {
                   </button>
 
                   {groupedQuestions[date].map((question) => (
-                    <div key={question.id} className="mb-4 border-b pb-2 last:border-b-0 flex justify-between items-start">
-                      <p className="font-bold flex-1">{question.question_text}</p>
+                    <div key={question.id} className="mb-6 border-b pb-4 last:border-b-0">
+                      <p className="font-bold mb-2">{question.question_text}</p>
+                      {question.options && question.options.length > 0 && (
+                        <ul className="list-none pl-4">
+                          {question.options.map((opt, idx) => (
+                            <li
+                              key={idx}
+                              className={`mb-1 ${opt.is_correct ? 'text-green-600' : 'text-gray-700'}`}
+                            >
+                              {`${String.fromCharCode(97 + idx)}) ${opt.option_text}`}
+                              {opt.is_correct && ' +'}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                       <button
                         onClick={() => handleDeleteQuestion(question.id, date)}
-                        className="ml-4 text-red-500 hover:text-red-700"
+                        className="ml-4 mt-2 text-red-500 hover:text-red-700"
                       >
                         O'chirish
                       </button>
