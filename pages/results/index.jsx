@@ -111,71 +111,87 @@ const GroupedQuestions = ({ subjectId }) => {
     });
   };
 
-  // 📌 PDF Yuklab olish
-  const handleDownloadPDFByDate = (date) => {
-    const questions = groupedQuestions[date];
-    if (!questions || questions.length === 0) return;
+const handleDownloadPDFByDate = (date) => {
+  const questions = groupedQuestions[date];
+  if (!questions || questions.length === 0) return;
 
-    Promise.all([
-      import("jspdf"),
-      import("jspdf-autotable")
-    ]).then(([{ jsPDF }, autoTable]) => {
-      const doc = new jsPDF({ unit: "mm", format: "a4" });
-      const pageHeight = doc.internal.pageSize.height;
-      const margin = 15;
-      let y = margin + 10;
+  Promise.all([
+    import("jspdf"),
+    import("jspdf-autotable")
+  ]).then(([{ jsPDF }, autoTable]) => {
+    const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
+    doc.setFont("helvetica", "normal"); // <-- Yaxshi Unicode font
+    const pageHeight = doc.internal.pageSize.height;
+    const margin = 15;
+    let y = margin + 10;
 
-      // 📌 Sarlavha
-      doc.setFontSize(16);
-      doc.setTextColor(40, 60, 120);
-      doc.text(`📘 Savollar to'plami (${formatDate(date)})`, 105, margin, { align: "center" });
-      y += 10;
+    const cleanText = (rawText) => {
+      if (!rawText) return '';
+      return rawText
+        .replace(/\u00A0/g, ' ')
+        .replace(/\u200B/g, '')
+        .replace(/[\u2000-\u200F]/g, '')
+        .replace(/[\uFEFF]/g, '')
+        .replace(/['"’‘“”]/g, "'")
+        .replace(/o[`'’"]/g, "o'")
+        .replace(/g[`'’"]/g, "g'")
+        .replace(/\s+/g, ' ')
+        .trim();
+    };
 
-      questions.forEach((q, index) => {
-        doc.setFontSize(12);
-        doc.setTextColor(0, 0, 0);
+    doc.setFontSize(16);
+    doc.setTextColor(40, 60, 120);
+    doc.text(`📘 Savollar to'plami (${formatDate(date)})`, doc.internal.pageSize.getWidth() / 2, margin, { align: "center" });
+    y += 10;
 
-        const questionText = `${index + 1}. ${q.question_text}`;
-        const splitText = doc.splitTextToSize(questionText, 170);
-        const neededHeight = splitText.length * 6;
+    questions.forEach((q, index) => {
+      doc.setFontSize(12);
+      doc.setTextColor(0, 0, 0);
 
-        if (y + neededHeight > pageHeight - margin) {
+      const questionText = `${index + 1}. ${cleanText(q.question_text)}`;
+      const splitQuestionText = doc.splitTextToSize(questionText, 260);
+      const questionHeight = splitQuestionText.length * 6;
+
+      if (y + questionHeight > pageHeight - margin) {
+        doc.addPage();
+        y = margin;
+      }
+
+      splitQuestionText.forEach(line => {
+        doc.text(line, margin, y);
+        y += 6;
+      });
+
+      y += 3;
+
+      q.options.forEach(opt => {
+        const optionText = (opt.is_correct ? "✓ " : "") + cleanText(opt.option_text);
+        const splitOptionText = doc.splitTextToSize(optionText, 250);
+        const optionHeight = splitOptionText.length * 6;
+
+        if (y + optionHeight > pageHeight - margin) {
           doc.addPage();
           y = margin;
         }
 
-        doc.text(splitText, margin, y);
-        y += neededHeight + 3;
-
-        const rows = q.options.map((opt) => [
-          opt.option_text + (opt.is_correct ? "  ✓" : "")
-        ]);
-
-        autoTable.default(doc, {
-          startY: y,
-          body: rows,
-          styles: { fontSize: 10, halign: "left", cellPadding: 2 },
-          theme: "grid",
-          margin: { left: margin, right: margin },
-          pageBreak: "auto",
+        splitOptionText.forEach(line => {
+          doc.text("•", margin + 5, y);
+          doc.text(line, margin + 10, y);
+          y += 6;
         });
 
-        if (doc.lastAutoTable?.finalY) {
-          y = doc.lastAutoTable.finalY + 8;
-        }
+        y += 2;
       });
 
-      const pageCount = doc.internal.getNumberOfPages();
-      for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.setFontSize(10);
-        doc.setTextColor(100);
-        doc.text(`Sahifa ${i} / ${pageCount}`, 200, pageHeight - 5, { align: "right" });
-      }
-
-      doc.save(`savollar-${date}.pdf`);
+      y += 5;
     });
-  };
+
+    doc.save(`savollar_${date}.pdf`);
+  });
+};
+
+
+
 
   return (
     <div className="flex flex-col h-auto bg-gray-100">
