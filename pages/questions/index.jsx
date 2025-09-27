@@ -58,17 +58,18 @@ export default function Admin() {
 
   const deleteQuestion = (index) => setQuestions(questions.filter((_, qIndex) => qIndex !== index));
 
-  const handleQuestionChange = (index, value) => {
-    const newQuestions = [...questions];
-    newQuestions[index].questionText = value;
-    setQuestions(newQuestions);
-  };
+ const handleQuestionChange = (index, value) => {
+  const newQuestions = [...questions];
+  newQuestions[index].questionText = cleanText(value);
+  setQuestions(newQuestions);
+};
 
-  const handleOptionChange = (qIndex, oIndex, value) => {
-    const newQuestions = [...questions];
-    newQuestions[qIndex].options[oIndex].text = value;
-    setQuestions(newQuestions);
-  };
+const handleOptionChange = (qIndex, oIndex, value) => {
+  const newQuestions = [...questions];
+  newQuestions[qIndex].options[oIndex].text = cleanText(value);
+  setQuestions(newQuestions);
+};
+
 
   const setCorrectOption = (qIndex, oIndex) => {
     const newQuestions = [...questions];
@@ -80,15 +81,21 @@ export default function Admin() {
   };
 
   // 🔹 PDF yoki Word’dan nusxa olingan matnni tozalash funksiyasi
-  const cleanText = (rawText) => {
-    if (!rawText) return '';
-    return rawText
-      .replace(/\u00A0/g, ' ')        // non-breaking space
-      .replace(/\u200B/g, '')         // zero-width space
-      .replace(/[\u2000-\u200F]/g, '') // boshqa invisible characters
-      .replace(/\s+/g, ' ')           // ortiqcha bo‘sh joylarni bitta space bilan almashtirish
-      .trim();                         // bosh va oxirgi bo‘sh joylarni olib tashlash
-  };
+ const cleanText = (rawText) => {
+  if (!rawText) return '';
+
+  return rawText
+    .replace(/\u00A0/g, ' ')        // Non-breaking space
+    .replace(/\u200B/g, '')         // Zero-width space
+    .replace(/[\u2000-\u200F]/g, '') // Boshqa invisible characters
+    .replace(/[\uFEFF]/g, '')       // Byte Order Mark (BOM)
+    .replace(/['"’‘“”]/g, '"')      // Har xil qo‘shtirnoq va tirnoqlarni oddiy qo‘shtirnoqqa aylantirish
+    .replace(/\s+/g, ' ')           // Ortiqcha bo‘sh joylarni bitta space bilan almashtirish
+    .replace(/o[`'’"]/g, "o'")      // o bilan `'` kabi belgilarni `o'` ga aylantirish
+    .replace(/g[`'’"]/g, "g'")      // g bilan `'` kabi belgilarni `g'` ga aylantirish
+    .trim();                        // Bosh va oxirgi bo‘sh joylarni olib tashlash
+};
+
 
   const saveQuestions = async () => {
     const adminId = localStorage.getItem("adminId");
