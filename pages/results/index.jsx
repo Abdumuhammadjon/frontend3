@@ -1,11 +1,9 @@
- // components/GroupedQuestions.jsx (yoki pages/grouped-questions.js)
+// components/GroupedQuestions.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/router';
 import jsPDF from 'jspdf';
-import { loadNotoSansFont } from '/fonts/NotoSans-Regular';  // Font yuklash funksiyasini import qilish
-
-// Yo'lni moslashtiring
+import { loadNotoSansFont } from '/fonts/NotoSans-Regular'; // Font faylining mavjudligini tekshiring
 
 const GroupedQuestions = ({ subjectId }) => {
   const [groupedQuestions, setGroupedQuestions] = useState({});
