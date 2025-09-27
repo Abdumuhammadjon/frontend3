@@ -82,60 +82,66 @@ const UserResults = () => {
     }
   };
 
-  const handleDownloadPDF = async () => {
-    try {
-      if (!results || results.length === 0) {
-        alert("PDF uchun natijalar topilmadi.");
-        return;
-      }
-
-      const [{ jsPDF }, autoTable] = await Promise.all([
-        import("jspdf"),
-        import("jspdf-autotable"),
-      ]);
-
-      const doc = new jsPDF();
-      doc.setFontSize(18);
-      doc.text("Foydalanuvchilar natijalari", 14, 20);
-
-      results.forEach((res, index) => {
-        let startY = 30;
-        if (index > 0) doc.addPage();
-
-        doc.setFontSize(14);
-        doc.text(`${index + 1}. ${res.username}`, 14, startY);
-        doc.setFontSize(11);
-        doc.text(
-          `To'g'ri javoblar: ${res.correctAnswers}/${res.totalQuestions}  |  Foiz: ${res.scorePercentage}%`,
-          14,
-          startY + 6
-        );
-
-        if (res.answers && res.answers.length > 0) {
-          const tableData = res.answers.map((a, i) => [
-            i + 1,
-            a.question_text,   // ✅ to‘g‘ri maydon
-            a.user_answer || "-",
-            a.correct_answer,
-            a.is_correct ? "✅" : "❌",
-          ]);
-
-          autoTable.default(doc, {
-            head: [["#", "Savol", "Foydalanuvchi javobi", "To‘g‘ri javob", "Holat"]],
-            body: tableData,
-            startY: startY + 12,
-            theme: "grid",
-            styles: { fontSize: 9, cellPadding: 2 },
-            headStyles: { fillColor: [41, 128, 185] },
-          });
-        }
-      });
-
-      doc.save("natijalar.pdf");
-    } catch (err) {
-      alert("PDF yaratishda xatolik: " + (err?.message || "Noma'lum xatolik"));
+const handleDownloadPDF = async () => {
+  try {
+    if (!results || results.length === 0) {
+      alert("PDF uchun natijalar topilmadi.");
+      return;
     }
-  };
+
+    const [{ jsPDF }, autoTable] = await Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable"),
+    ]);
+
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text("Foydalanuvchilar natijalari", 14, 20);
+
+    results.forEach((res, index) => {
+      let startY = 30;
+      if (index > 0) doc.addPage();
+
+      doc.setFontSize(14);
+      doc.text(`${index + 1}. ${res.username}`, 14, startY);
+      doc.setFontSize(11);
+      doc.text(
+        `To'g'ri javoblar: ${res.correctAnswers}/${res.totalQuestions}  |  Foiz: ${res.scorePercentage}%`,
+        14,
+        startY + 6
+      );
+
+      if (res.answers && res.answers.length > 0) {
+        const tableData = res.answers.map((a, i) => [
+          i + 1,
+          a.question_text,                         // Savol
+          a.user_answer || "-",                    // Foydalanuvchi javobi
+          a.correct_answer,                        // To‘g‘ri javob
+          a.is_correct ? "✅" : "❓",               // Holat belgisi (❓ emas ❌)
+        ]);
+
+        autoTable.default(doc, {
+          head: [["#", "Savol", "Foydalanuvchi javobi", "To‘g‘ri javob", "Holat"]],
+          body: tableData,
+          startY: startY + 12,
+          theme: "grid",
+          styles: {
+            fontSize: 8.5, // ⬅️ savollar shriftini kichikroq qildik
+            cellPadding: 2,
+          },
+          headStyles: {
+            fillColor: [41, 128, 185],
+          },
+        });
+      }
+    });
+
+    doc.save("natijalar.pdf");
+  } catch (err) {
+    alert("PDF yaratishda xatolik: " + (err?.message || "Noma'lum xatolik"));
+  }
+};
+
 
   return (
     <div className="min-h-screen bg-gray-100 p-4 sm:p-6">

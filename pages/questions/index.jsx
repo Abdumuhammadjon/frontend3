@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from "next/router";
 import axios from 'axios';
-import { Menu, Home, Users, BarChart, Settings, Trash, CheckCircle, LogOut } from 'lucide-react';
+import { Menu, Home, Users, BarChart, Trash, CheckCircle, LogOut } from 'lucide-react';
 
 export default function Admin() {
   const [questions, setQuestions] = useState([]);
@@ -10,7 +10,7 @@ export default function Admin() {
   const [subjectId, setSubjectId] = useState(null);
   const [adminId, setAdminId] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isLoading, setIsLoading] = useState(false); // 🔥 Loader holati
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -27,16 +27,11 @@ export default function Admin() {
     }
   }, [router]);
 
-  const handleSubjectClick = () => {
-    router.push("/results");
-  };
-
-  const handleResultsClick = () => {
-    router.push("/UserResults");
-  };
+  const handleSubjectClick = () => router.push("/results");
+  const handleResultsClick = () => router.push("/UserResults");
 
   const handleLogout = () => {
-    document.cookie.split(";").forEach(function(cookie) {
+    document.cookie.split(";").forEach(cookie => {
       const name = cookie.split("=")[0].trim();
       document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
     });
@@ -61,21 +56,20 @@ export default function Admin() {
     ]);
   };
 
-  const deleteQuestion = (index) => {
-    setQuestions(questions.filter((_, qIndex) => qIndex !== index));
-  };
+  const deleteQuestion = (index) => setQuestions(questions.filter((_, qIndex) => qIndex !== index));
 
-  const handleQuestionChange = (index, value) => {
-    const newQuestions = [...questions];
-    newQuestions[index].questionText = value;
-    setQuestions(newQuestions);
-  };
+ const handleQuestionChange = (index, value) => {
+  const newQuestions = [...questions];
+  newQuestions[index].questionText = cleanText(value);
+  setQuestions(newQuestions);
+};
 
-  const handleOptionChange = (qIndex, oIndex, value) => {
-    const newQuestions = [...questions];
-    newQuestions[qIndex].options[oIndex].text = value;
-    setQuestions(newQuestions);
-  };
+const handleOptionChange = (qIndex, oIndex, value) => {
+  const newQuestions = [...questions];
+  newQuestions[qIndex].options[oIndex].text = cleanText(value);
+  setQuestions(newQuestions);
+};
+
 
   const setCorrectOption = (qIndex, oIndex) => {
     const newQuestions = [...questions];
@@ -86,6 +80,23 @@ export default function Admin() {
     setQuestions(newQuestions);
   };
 
+  // 🔹 PDF yoki Word’dan nusxa olingan matnni tozalash funksiyasi
+ const cleanText = (rawText) => {
+  if (!rawText) return '';
+
+  return rawText
+    .replace(/\u00A0/g, ' ')        // Non-breaking space
+    .replace(/\u200B/g, '')         // Zero-width space
+    .replace(/[\u2000-\u200F]/g, '') // Boshqa invisible characters
+    .replace(/[\uFEFF]/g, '')       // Byte Order Mark (BOM)
+    .replace(/['"’‘“”]/g, '"')      // Har xil qo‘shtirnoq va tirnoqlarni oddiy qo‘shtirnoqqa aylantirish
+    .replace(/\s+/g, ' ')           // Ortiqcha bo‘sh joylarni bitta space bilan almashtirish
+    .replace(/o[`'’"]/g, "o'")      // o bilan `'` kabi belgilarni `o'` ga aylantirish
+    .replace(/g[`'’"]/g, "g'")      // g bilan `'` kabi belgilarni `g'` ga aylantirish
+    .trim();                        // Bosh va oxirgi bo‘sh joylarni olib tashlash
+};
+
+
   const saveQuestions = async () => {
     const adminId = localStorage.getItem("adminId");
     const subjectId = localStorage.getItem("subjectId");
@@ -94,25 +105,37 @@ export default function Admin() {
       alert('Subject ID yoki Admin ID topilmadi!');
       return;
     }
+
     try {
-      setIsLoading(true); // 🔥 Loaderni yoqish
+      setIsLoading(true);
+
+      // 🔹 Backendga yuboriladigan matnni tozalash
+      const cleanedQuestions = questions.map(q => ({
+        questionText: cleanText(q.questionText),
+        options: q.options.map(o => ({
+          ...o,
+          text: cleanText(o.text)
+        }))
+      }));
+
       const response = await axios.post('https://backed1.onrender.com/api/question', {
         subjectId,
         adminId,
-        questions,
+        questions: cleanedQuestions,
       }, {
         headers: { 'Content-Type': 'application/json' },
       });
+
       alert(response.data.message || 'Savollar muvaffaqiyatli saqlandi!');
       setQuestions([]);
     } catch (error) {
       alert(error.response?.data?.message || 'Server bilan bog‘lanishda xatolik!');
     } finally {
-      setIsLoading(false); // 🔥 Loaderni o‘chirish
+      setIsLoading(false);
     }
   };
 
- return (
+  return (
     <div className="flex flex-col min-h-screen bg-gray-100">
       <Head>
         <title>Admin Paneli</title>
@@ -204,3 +227,4 @@ export default function Admin() {
     </div>
   );
 }
+
