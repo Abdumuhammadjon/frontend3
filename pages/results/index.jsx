@@ -55,7 +55,7 @@ const GroupedQuestions = ({ subjectId }) => {
     }
   };
 
-  // PDF yuklash funksiyasi (client-side jspdf bilan, custom font bilan)
+  // PDF yuklash funksiyasi (client-side jspdf bilan, custom font bilan, matnni qatorlarga bo'lish bilan)
   async function handleDownloadPDFByDate(date) {
     const questions = groupedQuestions[date];
     if (!questions || questions.length === 0) return;
@@ -70,39 +70,63 @@ const GroupedQuestions = ({ subjectId }) => {
       // Custom fontni qo'llash
       doc.setFont('NotoSans-Regular');  // Font nomi fontconverter'da ko'rsatilganicha
 
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const margin = 50;
+      const maxWidth = pageWidth - 2 * margin;
       let y = 50;
 
       // Sarlavha
       doc.setFontSize(18);
-      doc.text("Savollar ro'yxati", 50, y);
-      y += 40;
+      const titleLines = doc.splitTextToSize("Savollar ro'yxati", maxWidth);
+      titleLines.forEach(line => {
+        doc.text(line, margin, y);
+        y += 20;  // Qator oralig'i
+      });
+      y += 20;  // Qo'shimcha bo'shliq
 
       // Savollarni yozish
       questions.forEach((q, i) => {
+        // Savol matni
         const questionText = `${i + 1}. ${q.question_text || ''}`;
         doc.setFontSize(14);
-        doc.text(questionText, 50, y);
-        y += 25;
+        doc.setTextColor(0, 0, 0);
+        const questionLines = doc.splitTextToSize(questionText, maxWidth);
+        questionLines.forEach(line => {
+          if (y > doc.internal.pageSize.height - 50) {
+            doc.addPage();
+            y = 50;
+          }
+          doc.text(line, margin, y);
+          y += 18;  // Qator oralig'i
+        });
+        y += 10;  // Variantlar oldidan bo'shliq
 
         // Variantlar
         if (q.options) {
           q.options.forEach((opt, idx) => {
-            const optionText = `   ${String.fromCharCode(97 + idx)}) ${opt.option_text}${opt.is_correct ? " ✓" : ""}`;
+            const optionText = `${String.fromCharCode(97 + idx)}) ${opt.option_text}${opt.is_correct ? " ✓" : ""}`;
             doc.setFontSize(12);
-            // Ranglarni to'g'ri berish
             if (opt.is_correct) {
               doc.setTextColor(0, 128, 0);  // Yashil
             } else {
               doc.setTextColor(51, 51, 51);  // Kulrang
             }
-            doc.text(optionText, 70, y);
-            y += 20;
+            const optionLines = doc.splitTextToSize(optionText, maxWidth - 20);  // Indent uchun kamroq kenglik
+            optionLines.forEach(line => {
+              if (y > doc.internal.pageSize.height - 50) {
+                doc.addPage();
+                y = 50;
+              }
+              doc.text(line, margin + 20, y);  // Indent
+              y += 16;  // Qator oralig'i
+            });
+            y += 5;  // Keyingi variant oldidan bo'shliq
           });
         }
 
-        y += 10;
+        y += 15;  // Keyingi savol oldidan bo'shliq
 
-        // Agar sahifa to'lsa, yangi sahifa qo'shish
+        // Yangi sahifa kerak bo'lsa
         if (y > doc.internal.pageSize.height - 50) {
           doc.addPage();
           y = 50;
