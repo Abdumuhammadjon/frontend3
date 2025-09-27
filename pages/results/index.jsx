@@ -5,13 +5,7 @@ import { useRouter } from 'next/router';
 import jsPDF from 'jspdf';
 import { loadNotoSansFont } from '/fonts/NotoSans-Regular';  // Font yuklash funksiyasini import qilish
 
-// Fontni yuklash
-if (typeof window !== 'undefined') {
-  loadNotoSansFont(jsPDF);
-}
-
-// Custom font js faylini public/fonts dan import qilish
-import '/fonts/NotoSans-Regular.js';  // public/fonts/NotoSans-Regular.js
+// Yo'lni moslashtiring
 
 const GroupedQuestions = ({ subjectId }) => {
   const [groupedQuestions, setGroupedQuestions] = useState({});
@@ -21,7 +15,6 @@ const GroupedQuestions = ({ subjectId }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const router = useRouter();
 
-  // Savollarni olish
   useEffect(() => {
     const storedSubjectId = localStorage.getItem("subjectId");
     const idToUse = subjectId || storedSubjectId;
@@ -34,7 +27,6 @@ const GroupedQuestions = ({ subjectId }) => {
     }
   }, [subjectId, router]);
 
-  // API dan savollarni olish
   const fetchQuestions = async (idToUse) => {
     setLoading(true);
     try {
@@ -44,7 +36,6 @@ const GroupedQuestions = ({ subjectId }) => {
       );
 
       const datas = response.data || [];
-
       const grouped = datas.reduce((acc, question) => {
         const date = new Date(question.created_at).toISOString().split('T')[0];
         if (!acc[date]) acc[date] = [];
@@ -61,7 +52,6 @@ const GroupedQuestions = ({ subjectId }) => {
     }
   };
 
-  // PDF yuklash funksiyasi (client-side jspdf bilan, matnni qatorlarga bo'lish bilan)
   async function handleDownloadPDFByDate(date) {
     const questions = groupedQuestions[date];
     if (!questions || questions.length === 0) return;
@@ -73,10 +63,13 @@ const GroupedQuestions = ({ subjectId }) => {
         format: 'a4'
       });
 
-      // Debug: Mavjud fontlarni ko'rish (browser konsolda chiqadi)
+      // Debug: Mavjud fontlarni ko'rish
       console.log('Mavjud fontlar:', doc.getFontList());
 
-      // Custom fontni qo'llash (style 'normal' bilan)
+      // NotoSans fontini yuklash
+      loadNotoSansFont(doc);
+
+      // Custom fontni qo'llash
       doc.setFont('NotoSans-Regular', 'normal');
 
       const pageWidth = doc.internal.pageSize.getWidth();
@@ -118,9 +111,9 @@ const GroupedQuestions = ({ subjectId }) => {
             const optionText = `${String.fromCharCode(97 + idx)}) ${opt.option_text}${opt.is_correct ? " ✓" : ""}`;
             doc.setFontSize(12);
             if (opt.is_correct) {
-              doc.setTextColor(0, 128, 0);
+              doc.setTextColor(0, 0.5, 0);
             } else {
-              doc.setTextColor(51, 51, 51);
+              doc.setTextColor(0.2, 0.2, 0.2);
             }
             const optionLines = doc.splitTextToSize(optionText, maxWidth - 20);
             optionLines.forEach(line => {
@@ -150,7 +143,6 @@ const GroupedQuestions = ({ subjectId }) => {
     }
   }
 
-  // Savolni o'chirish
   const handleDeleteQuestion = async (questionId, date) => {
     if (!window.confirm("Bu savolni o'chirishni xohlaysizmi?")) return;
 
@@ -226,4 +218,4 @@ const GroupedQuestions = ({ subjectId }) => {
   );
 };
 
-export default GroupedQuestions; //fff
+export default GroupedQuestions;
