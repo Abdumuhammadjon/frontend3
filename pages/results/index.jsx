@@ -1,10 +1,19 @@
 // frontend/pages/GroupedQuestions.jsx
+
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import axios from "axios";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import { Menu, Home, Users, BarChart, Settings, LogOut, Trash2 } from "lucide-react";
+import {
+  Menu,
+  Home,
+  Users,
+  BarChart,
+  Settings,
+  LogOut,
+  Trash2,
+} from "lucide-react";
 
 const GroupedQuestions = ({ subjectId }) => {
   const [groupedQuestions, setGroupedQuestions] = useState({});
@@ -14,29 +23,119 @@ const GroupedQuestions = ({ subjectId }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const contentRef = useRef(null);
-
   const router = useRouter();
 
-  // Matnni tozalash
-  const sanitizeText = (text) => {
-    if (!text) return text;
-    return text
-      .replace(/'/g, "ʼ")
-      .replace(/"/g, "”")
-      .replace(/`/g, "´");
-  };
+  // === UTILITIES ===
 
-  // So‘zlarni maksimal 6 ta qilib bo‘luvchi funksiya
-  const splitTextByWords = (text, maxWordsPerLine = 6) => {
+  const sanitizeText = (text) =>
+    text
+      ?.replace(/'/g, "ʼ")
+      .replace(/"/g, "”")
+      .replace(/`/g, "´") || "";
+
+  const splitTextByWords = (text, maxWords = 6) => {
     const words = text.split(" ");
     const lines = [];
-    for (let i = 0; i < words.length; i += maxWordsPerLine) {
-      lines.push(words.slice(i, i + maxWordsPerLine).join(" "));
+    for (let i = 0; i < words.length; i += maxWords) {
+      lines.push(words.slice(i, i + maxWords).join(" "));
     }
     return lines;
   };
 
-  // Boshlang‘ich yuklash
+  const formatDate = (dateStr) =>
+    new Date(dateStr).toLocaleDateString("uz-UZ", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+  const groupByDate = (data) =>
+    data.reduce((acc, question) => {
+      const date = new Date(question.created_at).toISOString().split("T")[0];
+      acc[date] = acc[date] || [];
+      acc[date].push(question);
+      return acc;
+    }, {});
+
+  const generateQuestionPDF = (date, questions) => {
+    if (!questions?.length) return;
+
+    const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 15;
+    let y = margin;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.setTextColor(40, 40, 40);
+    doc.text(`📘 Savollar to‘plami`, pageWidth / 2, y, { align: "center" });
+    y += 10;
+
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(80);
+    doc.text(`📅 Sana: ${date}`, margin, y);
+    y += 10;
+
+    questions.forEach((q, index) => {
+      const questionLines = splitTextByWords(
+        sanitizeText(`${index + 1}. ${q.question_text}`),
+        10
+      );
+      const lineHeight = 6;
+      const questionHeight = questionLines.length * lineHeight + 4;
+
+      if (y + questionHeight > pageHeight - margin) {
+        doc.addPage();
+        y = margin;
+      }
+
+      doc.setFontSize(11);
+      doc.setTextColor(20);
+      questionLines.forEach((line) => {
+        doc.text(line, margin, y);
+        y += lineHeight;
+      });
+
+      y += 2;
+
+      const rows = q.options.map((opt) => [
+        sanitizeText(opt.option_text) + (opt.is_correct ? " ✓" : ""),
+      ]);
+
+      autoTable(doc, {
+        startY: y,
+        body: rows,
+        styles: {
+          fontSize: 10,
+          cellPadding: 2,
+          halign: "left",
+        },
+        theme: "grid",
+        margin: { left: margin, right: margin },
+        tableWidth: "wrap",
+        didDrawPage: (data) => {
+          y = data.cursor.y + 10;
+        },
+      });
+    });
+
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(9);
+      doc.setTextColor(100);
+      doc.text(`Sahifa ${i} / ${pageCount}`, pageWidth - margin, pageHeight - 5, {
+        align: "right",
+      });
+    }
+
+    doc.save(`savollar-${date}.pdf`);
+  };
+
+  // === LIFECYCLE ===
+
   useEffect(() => {
     const storedSubjectId =
       typeof window !== "undefined" ? localStorage.getItem("subjectId") : null;
@@ -50,166 +149,67 @@ const GroupedQuestions = ({ subjectId }) => {
     }
   }, [subjectId]);
 
-  // Scrollni tepasiga qaytarish
   useEffect(() => {
     if (contentRef.current) {
       contentRef.current.scrollTop = 0;
     }
   }, [groupedQuestions, selectedDate]);
 
-  // Savollarni olish
+  // === API ===
+
   const fetchQuestions = async (idToUse) => {
     setLoading(true);
     try {
       const response = await axios.get(
-        `https://backed1.onrender.com/api/subject/${idToUse}`,
-        { headers: { "Content-Type": "application/json" } }
+        `https://backed1.onrender.com/api/subject/${idToUse}`
       );
-
-      const data = response.data;
-
-      const grouped = data.reduce((acc, question) => {
-        const date = new Date(question.created_at).toISOString().split("T")[0];
-        if (!acc[date]) acc[date] = [];
-        acc[date].push(question);
-        return acc;
-      }, {});
-
-      setGroupedQuestions(grouped);
+      setGroupedQuestions(groupByDate(response.data));
       setError(null);
     } catch (err) {
-      setError(
-        (err.response && err.response.data && err.response.data.error) ||
-          "Savollarni yuklashda xatolik"
-      );
+      setError("Savollarni yuklashda xatolik");
     } finally {
       setLoading(false);
     }
   };
 
-  // Savolni o‘chirish
   const handleDeleteQuestion = async (questionId, date) => {
     if (!window.confirm("Bu savolni o'chirishni xohlaysizmi?")) return;
-
+    setLoading(true);
     try {
-      setLoading(true);
       await axios.delete(
-        `https://backed1.onrender.com/api/question/${questionId}`,
-        { headers: { "Content-Type": "application/json" } }
+        `https://backed1.onrender.com/api/question/${questionId}`
       );
-
       setGroupedQuestions((prev) => {
         const updated = { ...prev };
         updated[date] = updated[date].filter((q) => q.id !== questionId);
         if (updated[date].length === 0) delete updated[date];
         return updated;
       });
-      setError(null);
     } catch (err) {
-      setError(
-        (err.response && err.response.data && err.response.data.error) ||
-          "Savolni o'chirishda xatolik"
-      );
+      setError("Savolni o'chirishda xatolik");
     } finally {
       setLoading(false);
     }
   };
 
-  // Sahifalararo o‘tish
+  // === NAVIGATION ===
+
   const handleSubjectClick = () => router.push("/questions");
   const handleResultClick = () => router.push("/results");
   const handleUserResultsClick = () => router.push("/UserResults");
 
-  // Chiqish
   const handleLogout = () => {
-    document.cookie.split(";").forEach(function (cookie) {
+    document.cookie.split(";").forEach((cookie) => {
       const name = cookie.split("=")[0].trim();
-      document.cookie =
-        name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
     });
-
     localStorage.clear();
     sessionStorage.clear();
     setIsLoggedIn(false);
     router.push("/Login");
   };
 
-  // Sanani formatlash
-  const formatDate = (dateStr) =>
-    new Date(dateStr).toLocaleDateString("uz-UZ", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-
-  // PDF yaratish funksiyasi
-  const handleDownloadPDFByDate = (date, questions) => {
-    if (!questions || questions.length === 0) return;
-
-    const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
-    const pageHeight = doc.internal.pageSize.height;
-    const pageWidth = doc.internal.pageSize.width;
-    const margin = 15;
-    let y = margin + 10;
-
-    doc.setFont("helvetica");
-    doc.setFontSize(10);
-    doc.setTextColor(40, 60, 120);
-    doc.text(`📘 Savollar to‘plami (${date})`, pageWidth / 2, margin, { align: "center" });
-    y += 10;
-
-    questions.forEach((q, index) => {
-      doc.setFontSize(11);
-      doc.setTextColor(0, 0, 0);
-
-      // So‘zlarni 6 ta qilib bo‘lish
-      const questionText = sanitizeText(`${index + 1}. ${q.question_text}`);
-      const splitText = splitTextByWords(questionText, 6);
-
-      const neededHeight = splitText.length * 5;
-
-      // Sahifa chetiga yetganda yangi sahifa
-      if (y + neededHeight > pageHeight - margin) {
-        doc.addPage();
-        y = margin;
-      }
-
-      // Savol matnini chizish (har qatorni alohida chiqarish)
-      splitText.forEach((line) => {
-        doc.text(line, margin, y);
-        y += 5;
-      });
-      y += 2;
-
-      // Variantlarni jadvalga o‘xshash qilib yaqinroq chiqarish
-      const rows = q.options.map(opt => [
-        sanitizeText(opt.option_text) + (opt.is_correct ? " ✓" : "")
-      ]);
-
-      autoTable(doc, {
-        startY: y,
-        body: rows,
-        styles: { font: "helvetica", fontSize: 9, cellPadding: 1 },
-        theme: "grid",
-        margin: { left: margin, right: margin },
-        tableWidth: "wrap",
-        didDrawCell: (data) => {
-          y = data.cursor.y + 2; // variantlar orasini yaqinroq qilish uchun
-        }
-      });
-    });
-
-    // Sahifa raqamlari
-    const pageCount = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(10);
-      doc.setTextColor(100);
-      doc.text(`Sahifa ${i} / ${pageCount}`, pageWidth - 15, pageHeight - 5, { align: "right" });
-    }
-
-    doc.save(`savollar-${date}.pdf`);
-  };
+  // === UI ===
 
   return (
     <div className="flex flex-col h-auto bg-gray-100">
@@ -219,20 +219,21 @@ const GroupedQuestions = ({ subjectId }) => {
         </div>
       )}
 
-      {/* Header */}
+      {/* HEADER */}
       <div className="bg-white shadow-md h-16 flex items-center px-6 fixed w-full z-50 top-0">
         <h1 className="text-2xl font-bold text-gray-800">Savollar Bazasi</h1>
       </div>
 
-      {/* Main content */}
       <div className="flex flex-1 pt-16">
-        {/* Sidebar */}
+        {/* SIDEBAR */}
         <div
           className={`bg-gray-900 text-white fixed h-[calc(100vh-4rem)] p-5 top-16 transition-all duration-300 ${
             isSidebarOpen ? "w-64" : "w-20"
           } z-40 overflow-y-auto`}
         >
           <button
+            type="button"
+            aria-label="Menyuni ochish"
             className="text-white mb-6"
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
           >
@@ -273,7 +274,7 @@ const GroupedQuestions = ({ subjectId }) => {
           </ul>
         </div>
 
-        {/* Content */}
+        {/* CONTENT */}
         <div
           ref={contentRef}
           className={`flex-1 p-6 transition-all duration-300 ${
@@ -285,7 +286,7 @@ const GroupedQuestions = ({ subjectId }) => {
               Xatolik: {error}
             </div>
           ) : (
-            <div className="max-w-4xl mx-auto space-y-6 h-[calc(100vh-16rem)] overflow-y-auto -webkit-overflow-scrolling-touch">
+            <div className="max-w-4xl mx-auto space-y-6 overflow-y-auto">
               {Object.keys(groupedQuestions)
                 .sort()
                 .map((date) => (
@@ -300,7 +301,7 @@ const GroupedQuestions = ({ subjectId }) => {
                     </button>
 
                     {selectedDate === date && (
-                      <div className="p-4 bg-white rounded-md shadow-md mt-3 overflow-auto max-h-96">
+                      <div className="p-4 bg-white rounded-md shadow-md mt-3 max-h-[60vh] overflow-auto">
                         {groupedQuestions[date].map((question) => (
                           <div
                             key={question.id}
@@ -325,7 +326,7 @@ const GroupedQuestions = ({ subjectId }) => {
                               onClick={() =>
                                 handleDeleteQuestion(question.id, date)
                               }
-                              className="mt-2 text-red-600 hover:underline"
+                              className="mt-2 text-red-600 hover:underline flex gap-1 items-center"
                             >
                               <Trash2 size={16} /> Savolni o'chirish
                             </button>
@@ -333,7 +334,7 @@ const GroupedQuestions = ({ subjectId }) => {
                         ))}
                         <button
                           onClick={() =>
-                            handleDownloadPDFByDate(date, groupedQuestions[date])
+                            generateQuestionPDF(date, groupedQuestions[date])
                           }
                           className="mt-4 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
                         >
