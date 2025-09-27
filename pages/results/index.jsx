@@ -1,5 +1,4 @@
-import { PDFDocument, rgb } from "pdf-lib";
-import fontkit from "fontkit";
+import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
@@ -68,76 +67,55 @@ const GroupedQuestions = ({ subjectId }) => {
 
 
 
+
 const handleDownloadPDFByDate = async (data) => {
-  try {
-    // PDF yaratamiz
-    const pdfDoc = await PDFDocument.create();
+  const pdfDoc = await PDFDocument.create();
+  const page = pdfDoc.addPage([842, 595]);
+  const { height } = page.getSize();
 
-    // fontkit ni ro‘yxatdan o‘tkazamiz
-    pdfDoc.registerFontkit(fontkit);
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica); // ✅ fontkit kerak emas
 
-    // Sahifa qo‘shamiz
-    const page = pdfDoc.addPage([842, 595]); // A4 landscape
-    const { height } = page.getSize();
+  let y = height - 50;
 
-    // Custom shriftni yuklash
-    const fontUrl = "/fonts/NotoSans-Regular.ttf";
-    const fontBytes = await fetch(fontUrl).then((res) => res.arrayBuffer());
-    const customFont = await pdfDoc.embedFont(fontBytes);
+  page.drawText("Savollar ro'yxati", {
+    x: 50,
+    y,
+    size: 18,
+    font,
+    color: rgb(0, 0, 0),
+  });
 
-    let y = height - 50;
-
-    // Title
-    page.drawText("Savollar ro'yxati", {
+  // savollar va variantlar
+  data.forEach((item, index) => {
+    y -= 30;
+    page.drawText(`${index + 1}. ${item.question}`, {
       x: 50,
       y,
-      size: 18,
-      font: customFont,
+      size: 14,
+      font,
       color: rgb(0, 0, 0),
     });
-    y -= 40;
 
-    // Savollar
-    data.forEach((item, index) => {
-      const question = `${index + 1}. ${item.question}`;
-      page.drawText(question, {
-        x: 50,
+    item.options.forEach((option, i) => {
+      y -= 20;
+      page.drawText(`   ${String.fromCharCode(97 + i)}) ${option}`, {
+        x: 70,
         y,
-        size: 14,
-        font: customFont,
-        color: rgb(0, 0, 0),
+        size: 12,
+        font,
+        color: rgb(0.2, 0.2, 0.2),
       });
-      y -= 25;
-
-      item.options.forEach((option, i) => {
-        page.drawText(`   ${String.fromCharCode(97 + i)}) ${option}`, {
-          x: 70,
-          y,
-          size: 12,
-          font: customFont,
-          color: rgb(0.2, 0.2, 0.2),
-        });
-        y -= 20;
-      });
-
-      y -= 10;
-      if (y < 100) {
-        y = height - 50;
-        pdfDoc.addPage([842, 595]);
-      }
     });
+  });
 
-    // PDF saqlash
-    const pdfBytes = await pdfDoc.save();
-    const blob = new Blob([pdfBytes], { type: "application/pdf" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "savollar.pdf";
-    link.click();
-  } catch (err) {
-    console.error("PDF yaratishda xato:", err);
-  }
+  const pdfBytes = await pdfDoc.save();
+  const blob = new Blob([pdfBytes], { type: "application/pdf" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "savollar.pdf";
+  link.click();
 };
+ // ishlasin
 
 
   // 🔹 Savolni o‘chirish
