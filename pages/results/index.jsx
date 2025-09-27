@@ -1,4 +1,5 @@
 import { PDFDocument, rgb } from "pdf-lib";
+import fontkit from "fontkit";
 
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
