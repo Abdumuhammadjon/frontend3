@@ -1,4 +1,5 @@
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { PDFDocument, rgb } from "pdf-lib";
+
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/router';
@@ -63,91 +64,78 @@ const GroupedQuestions = ({ subjectId }) => {
   };
 
   // 🔹 PDF yuklab olish
-  const handleDownloadPDFByDate = async (date) => {
-    const questions = groupedQuestions[date];
-    if (!questions || questions.length === 0) {
-      alert("Bu sanaga oid savollar topilmadi");
-      return;
-    }
+import { PDFDocument, rgb } from "pdf-lib";
 
-    function wrapText(text, maxWidth, font, fontSize) {
-      const words = text.split(" ");
-      const lines = [];
-      let currentLine = "";
-
-      for (let word of words) {
-        const testLine = currentLine ? currentLine + " " + word : word;
-        const width = font.widthOfTextAtSize(testLine, fontSize);
-        if (width <= maxWidth) {
-          currentLine = testLine;
-        } else {
-          if (currentLine) lines.push(currentLine);
-          currentLine = word;
-        }
-      }
-      if (currentLine) lines.push(currentLine);
-      return lines;
-    }
-
+const handleDownloadPDFByDate = async (data) => {
+  try {
+    // Yangi PDF yaratamiz
     const pdfDoc = await PDFDocument.create();
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const page = pdfDoc.addPage([842, 595]); // A4 landscape (albom shakli)
 
-    let page = pdfDoc.addPage([842, 595]); // 🔄 Albom format
-    const { width, height } = page.getSize();
+    // Shriftni yuklash
+    const fontUrl = "/fonts/NotoSans-Regular.ttf";
+    const fontBytes = await fetch(fontUrl).then((res) => res.arrayBuffer());
+    const customFont = await pdfDoc.embedFont(fontBytes);
 
-    const fontSize = 12;
-    const lineHeight = fontSize + 4;
-    const maxWidth = width - 100;
-    let y = height - 50;
+    const { height } = page.getSize();
+    let y = height - 50; // yuqoridan boshlaymiz
 
-    for (let q of questions) {
-      // Savol
-      const questionLines = wrapText(q.question_text, maxWidth, font, fontSize);
-      questionLines.forEach((line) => {
-        page.drawText(line, { x: 50, y, size: fontSize, font, color: rgb(0, 0, 0) });
-        y -= lineHeight;
-        if (y < 50) {
-          y = height - 50;
-          page = pdfDoc.addPage([842, 595]);
-        }
+    // Title
+    page.drawText("Savollar ro'yxati", {
+      x: 50,
+      y,
+      size: 18,
+      font: customFont,
+      color: rgb(0, 0, 0),
+    });
+    y -= 40;
+
+    // Savollar va variantlar
+    data.forEach((item, index) => {
+      const question = `${index + 1}. ${item.question}`;
+      page.drawText(question, {
+        x: 50,
+        y,
+        size: 14,
+        font: customFont,
+        color: rgb(0, 0, 0),
       });
-
-      y -= lineHeight / 2;
+      y -= 25;
 
       // Variantlar
-      if (q.options && q.options.length > 0) {
-        q.options.forEach((opt) => {
-          const optionLines = wrapText(opt.option_text, maxWidth - 20, font, fontSize);
-          optionLines.forEach((line, idx) => {
-            page.drawText(idx === 0 ? `- ${line}` : `  ${line}`, {
-              x: 70,
-              y,
-              size: fontSize,
-              font,
-              color: opt.is_correct ? rgb(0, 0.6, 0) : rgb(0, 0, 0),
-            });
-            y -= lineHeight;
-            if (y < 50) {
-              y = height - 50;
-              page = pdfDoc.addPage([842, 595]);
-            }
-          });
+      item.options.forEach((option, i) => {
+        page.drawText(`   ${String.fromCharCode(97 + i)}) ${option}`, {
+          x: 70,
+          y,
+          size: 12,
+          font: customFont,
+          color: rgb(0.2, 0.2, 0.2),
         });
+        y -= 20;
+      });
+
+      y -= 10; // har savoldan keyin bo'sh joy
+      if (y < 100) {
+        // Sahifa tugasa yangi sahifa
+        y = height - 50;
+        pdfDoc.addPage([842, 595]);
       }
+    });
 
-      y -= lineHeight;
-    }
-
+    // PDF ni yaratamiz
     const pdfBytes = await pdfDoc.save();
-    const blob = new Blob([pdfBytes], { type: "application/pdf" });
-    const url = URL.createObjectURL(blob);
 
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `questions_${date}.pdf`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+    // Yuklab berish
+    const blob = new Blob([pdfBytes], { type: "application/pdf" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "savollar.pdf";
+    link.click();
+  } catch (err) {
+    console.error("PDF yaratishda xato:", err);
+  }
+};
+
 
   // 🔹 Savolni o‘chirish
   const handleDeleteQuestion = async (questionId, date) => {
