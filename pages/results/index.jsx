@@ -57,82 +57,83 @@ const GroupedQuestions = ({ subjectId }) => {
       return acc;
     }, {});
 
-  const generateQuestionPDF = (date, questions) => {
-    if (!questions?.length) return;
+const generateQuestionPDF = (date, questions) => {
+  if (!questions?.length) return;
 
-    const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 15;
-    let y = margin;
+  const doc = new jsPDF({
+    unit: "mm",
+    format: "a4",
+    orientation: "portrait", // ✅ Kitob shakli
+  });
 
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
-    doc.setTextColor(40, 40, 40);
-    doc.text(`📘 Savollar to‘plami`, pageWidth / 2, y, { align: "center" });
-    y += 10;
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 20;
+  let y = margin;
 
-    doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.setTextColor(40, 40, 40);
+  doc.text(`📘 Savollar to‘plami (${date})`, pageWidth / 2, y, {
+    align: "center",
+  });
+  y += 10;
+
+  questions.forEach((q, index) => {
+    const questionLines = splitTextByWords(
+      sanitizeText(`${index + 1}. ${q.question_text}`),
+      10
+    );
+    const lineHeight = 7;
+    const questionHeight = questionLines.length * lineHeight + 5;
+
+    if (y + questionHeight > pageHeight - margin) {
+      doc.addPage();
+      y = margin;
+    }
+
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(80);
-    doc.text(`📅 Sana: ${date}`, margin, y);
-    y += 10;
+    doc.setFontSize(12);
+    doc.setTextColor(20);
 
-    questions.forEach((q, index) => {
-      const questionLines = splitTextByWords(
-        sanitizeText(`${index + 1}. ${q.question_text}`),
-        10
-      );
-      const lineHeight = 6;
-      const questionHeight = questionLines.length * lineHeight + 4;
+    questionLines.forEach((line) => {
+      doc.text(line, margin, y);
+      y += lineHeight;
+    });
 
-      if (y + questionHeight > pageHeight - margin) {
+    y += 2;
+
+    q.options.forEach((opt, idx) => {
+      const prefix = String.fromCharCode(65 + idx);
+      const isCorrect = opt.is_correct ? " ✓" : "";
+      const optionText = `${prefix}) ${sanitizeText(opt.option_text)}${isCorrect}`;
+
+      if (y + lineHeight > pageHeight - margin) {
         doc.addPage();
         y = margin;
       }
 
-      doc.setFontSize(11);
-      doc.setTextColor(20);
-      questionLines.forEach((line) => {
-        doc.text(line, margin, y);
-        y += lineHeight;
-      });
-
-      y += 2;
-
-      const rows = q.options.map((opt) => [
-        sanitizeText(opt.option_text) + (opt.is_correct ? " ✓" : ""),
-      ]);
-
-      autoTable(doc, {
-        startY: y,
-        body: rows,
-        styles: {
-          fontSize: 10,
-          cellPadding: 2,
-          halign: "left",
-        },
-        theme: "grid",
-        margin: { left: margin, right: margin },
-        tableWidth: "wrap",
-        didDrawPage: (data) => {
-          y = data.cursor.y + 10;
-        },
-      });
+      doc.setFont("helvetica", opt.is_correct ? "bold" : "normal");
+      doc.setTextColor(opt.is_correct ? "green" : "black");
+      doc.text(optionText, margin + 10, y);
+      y += lineHeight;
     });
 
-    const pageCount = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(9);
-      doc.setTextColor(100);
-      doc.text(`Sahifa ${i} / ${pageCount}`, pageWidth - margin, pageHeight - 5, {
-        align: "right",
-      });
-    }
+    y += 10; // 🔹 Savollar orasida bo‘sh joy
+  });
 
-    doc.save(`savollar-${date}.pdf`);
-  };
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(9);
+    doc.setTextColor(100);
+    doc.text(`Sahifa ${i} / ${pageCount}`, pageWidth - margin, pageHeight - 10, {
+      align: "right",
+    });
+  }
+
+  doc.save(`savollar-${date}.pdf`);
+};
 
   // === LIFECYCLE ===
 
