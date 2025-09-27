@@ -132,8 +132,7 @@ const GroupedQuestions = ({ subjectId }) => {
       day: "numeric",
     });
 
-  // PDF yuklab olish (standart font bilan)
-const handleDownloadPDFByDate = (date, questions) => {
+ const handleDownloadPDFByDate = (date, questions) => {
   if (!questions || questions.length === 0) return;
 
   const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
@@ -143,55 +142,47 @@ const handleDownloadPDFByDate = (date, questions) => {
   let y = margin + 10;
 
   doc.setFont("helvetica");
-  doc.setFontSize(10); // Biroz kichik shrift
+  doc.setFontSize(10);
   doc.setTextColor(40, 60, 120);
   doc.text(`📘 Savollar to‘plami (${date})`, pageWidth / 2, margin, { align: "center" });
-  y += 8; // Oraliqni kamaytirdim (oldingi 10 edi)
+  y += 10;
 
   questions.forEach((q, index) => {
-    doc.setFontSize(11); // Savol uchun kichikroq shrift
+    doc.setFontSize(11);
     doc.setTextColor(0, 0, 0);
 
+    // So‘zlarni 6 ta qilib bo‘lish
     const questionText = sanitizeText(`${index + 1}. ${q.question_text}`);
-    const words = questionText.split(" ");
+    const splitText = splitTextByWords(questionText, 6);
 
-    let splitText = [];
-    for (let i = 0; i < words.length; i += 6) {
-      splitText.push(words.slice(i, i + 6).join(" "));
-    }
+    const neededHeight = splitText.length * 5;
 
-    const neededHeight = splitText.length * 5; // qator orasini biroz siqib qo'ydim (oldingi 6 edi)
-
+    // Sahifa chetiga yetganda yangi sahifa
     if (y + neededHeight > pageHeight - margin) {
       doc.addPage();
       y = margin;
     }
 
+    // Savol matnini chizish
     doc.text(splitText, margin, y);
-    y += neededHeight + 2; // variantlardan oldingi bo'shliqni kamaytirdim (oldingi 3 edi)
+    y += neededHeight + 2;
 
-    // Variantlar jadvali
-    const rows = q.options.map((opt) => [
-      sanitizeText(opt.option_text) + (opt.is_correct ? "  ✓" : ""),
+    // Variantlarni jadvalga o‘xshash qilib yaqinroq chiqarish
+    const rows = q.options.map(opt => [
+      sanitizeText(opt.option_text) + (opt.is_correct ? " ✓" : "")
     ]);
 
     autoTable(doc, {
       startY: y,
       body: rows,
-      styles: {
-        font: "helvetica",
-        fontSize: 9, // variantlar uchun kichik shrift
-        cellPadding: 2, // kataklar ichidagi bo'shliqni kamaytirdim
-        valign: "middle",
-      },
+      styles: { font: "helvetica", fontSize: 9, cellPadding: 1 },
       theme: "grid",
       margin: { left: margin, right: margin },
       tableWidth: "wrap",
+      didDrawCell: (data) => {
+        y = data.cursor.y + 2; // variantlar orasini yaqinroq qilish uchun
+      }
     });
-
-    if (doc.lastAutoTable && doc.lastAutoTable.finalY) {
-      y = doc.lastAutoTable.finalY + 5; // keyingi savol oldidan kichik bo'shliq
-    }
   });
 
   // Sahifa raqamlari
@@ -200,13 +191,12 @@ const handleDownloadPDFByDate = (date, questions) => {
     doc.setPage(i);
     doc.setFontSize(10);
     doc.setTextColor(100);
-    doc.text(`Sahifa ${i} / ${pageCount}`, pageWidth - 15, pageHeight - 5, {
-      align: "right",
-    });
+    doc.text(`Sahifa ${i} / ${pageCount}`, pageWidth - 15, pageHeight - 5, { align: "right" });
   }
 
   doc.save(`savollar-${date}.pdf`);
 };
+
 
   return (
     <div className="flex flex-col h-auto bg-gray-100">
