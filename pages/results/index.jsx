@@ -1,7 +1,13 @@
-// components/GroupedQuestions.jsx (yoki pages/grouped-questions.js agar dynamic bo'lsa)
+// Bu fayl: components/GroupedQuestions.jsx (yoki pages/grouped-questions.js)
+// Next.js loyihasida ishlaydi. PDF yaratish endi client-side (brauzerda) jspdf kutubxonasi bilan amalga oshiriladi.
+// npm install jspdf --save qiling.
+// public/NotoSans-Regular.ttf ni base64 ga o'tkazing va quyidagi kodda ishlatilgan.
+// Base64 ni olish uchun: https://base64.guru/converter/encode/font dan foydalaning va fontBase64 ni o'rnating.
+
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/router';
+import jsPDF from 'jspdf';
 
 const GroupedQuestions = ({ subjectId }) => {
   const [groupedQuestions, setGroupedQuestions] = useState({});
@@ -51,30 +57,62 @@ const GroupedQuestions = ({ subjectId }) => {
     }
   };
 
-  // PDF yuklash funksiyasi (server tomoniga o'tkazilgan)
+  // PDF yuklash funksiyasi (client-side jspdf bilan)
   async function handleDownloadPDFByDate(date) {
     const questions = groupedQuestions[date];
     if (!questions || questions.length === 0) return;
 
     try {
-      const response = await fetch('/api/generate-pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questions, date }),
+      const doc = new jsPDF({
+        orientation: 'landscape',
+        unit: 'pt',
+        format: 'a4'
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "PDF yuklashda xatolik");
-      }
+      // Custom fontni base64 formatida yuklash (NotoSans-Regular.ttf ni base64 ga o'tkazing)
+      const fontBase64 = 'AAEAAAAPAIAAAwBwT1MvMg8yFRAAAAAAAACsAAAAWGNtYXAA...'; // BU YERGA TO'LIQ BASE64 NI QO'YING (NotoSans-Regular.ttf base64)
+      doc.addFileToVFS('NotoSans-Regular.ttf', fontBase64);
+      doc.addFont('NotoSans-Regular.ttf', 'NotoSans', 'normal');
+      doc.setFont('NotoSans');
 
-      const blob = await response.blob();
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = `savollar-${date}.pdf`;
-      link.click();
+      let y = 50;
+
+      // Sarlavha
+      doc.setFontSize(18);
+      doc.text("Savollar ro'yxati", 50, y);
+      y += 40;
+
+      // Savollarni yozish
+      questions.forEach((q, i) => {
+        const questionText = `${i + 1}. ${q.question_text || ''}`;
+        doc.setFontSize(14);
+        doc.text(questionText, 50, y);
+        y += 25;
+
+        // Variantlar
+        if (q.options) {
+          q.options.forEach((opt, idx) => {
+            const optionText = `   ${String.fromCharCode(97 + idx)}) ${opt.option_text}${opt.is_correct ? " ✓" : ""}`;
+            doc.setFontSize(12);
+            doc.setTextColor(opt.is_correct ? '0, 128, 0' : '51, 51, 51');
+            doc.text(optionText, 70, y);
+            y += 20;
+          });
+        }
+
+        y += 10;
+
+        // Agar sahifa to'lsa, yangi sahifa qo'shish
+        if (y > doc.internal.pageSize.height - 50) {
+          doc.addPage();
+          y = 50;
+        }
+      });
+
+      // PDF saqlash
+      doc.save(`savollar-${date}.pdf`);
     } catch (err) {
-      setError(err.message);
+      setError("PDF yaratishda xatolik: " + err.message);
     }
   }
 
