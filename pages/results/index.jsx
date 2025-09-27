@@ -138,91 +138,106 @@ const GroupedQuestions = ({ subjectId }) => {
 const handleDownloadPDFByDate = async (date, questions) => {
   if (!questions || questions.length === 0) return;
 
-  const fontUrl = '/fonts/NotoSans-Regular.ttf';
-  const fontBytes = await fetch(fontUrl).then(res => res.arrayBuffer());
+  try {
+    // 1. ✅ Shrfitni yuklab olish
+    const fontUrl = '/fonts/NotoSans-Regular.ttf';
+    const fontBytes = await fetch(fontUrl).then(res => res.arrayBuffer());
 
-  const pdfDoc = await PDFDocument.create();
-  const notoFont = await pdfDoc.embedFont(fontBytes);
-  let page = pdfDoc.addPage([842, 595]); // A4 landscape
-  const { width, height } = page.getSize();
+    // 2. ✅ PDF yaratish va shriftni embed qilish
+    const pdfDoc = await PDFDocument.create();
+    const notoFont = await pdfDoc.embedFont(fontBytes);
 
-  const fontSize = 11;
-  const lineHeight = 18;
-  const margin = 40;
-  let y = height - margin;
+    let page = pdfDoc.addPage([842, 595]); // A4 landscape
+    const { width, height } = page.getSize();
 
-  const wrapText = (text, maxWidth) => {
-    const words = text.split(" ");
-    const lines = [];
-    let line = "";
-    for (let word of words) {
-      const testLine = line + word + " ";
-      const testWidth = notoFont.widthOfTextAtSize(testLine, fontSize);
-      if (testWidth > maxWidth) {
-        lines.push(line.trim());
-        line = word + " ";
-      } else {
-        line = testLine;
+    const fontSize = 11;
+    const lineHeight = 18;
+    const margin = 40;
+    let y = height - margin;
+
+    // 3. ✅ Matnni bo‘lish funksiyasi
+    const wrapText = (text, maxWidth) => {
+      const words = text.split(" ");
+      const lines = [];
+      let line = "";
+      for (let word of words) {
+        const testLine = line + word + " ";
+        const testWidth = notoFont.widthOfTextAtSize(testLine, fontSize);
+        if (testWidth > maxWidth) {
+          lines.push(line.trim());
+          line = word + " ";
+        } else {
+          line = testLine;
+        }
       }
-    }
-    lines.push(line.trim());
-    return lines;
-  };
+      lines.push(line.trim());
+      return lines;
+    };
 
-  // Header
-  const title = `📘 Savollar to‘plami (${date})`;
-  page.drawText(title, {
-    x: width / 2 - notoFont.widthOfTextAtSize(title, fontSize + 2) / 2,
-    y,
-    size: fontSize + 2,
-    font: notoFont,
-    color: rgb(0.1, 0.1, 0.6),
-  });
-  y -= lineHeight;
-
-  for (let i = 0; i < questions.length; i++) {
-    const question = questions[i];
-    const questionText = sanitizeText(`${i + 1}. ${question.question_text}`);
-    const wrapped = wrapText(questionText, width - margin * 2);
-
-    if (y - wrapped.length * lineHeight < margin) {
-      page = pdfDoc.addPage([842, 595]);
-      y = height - margin;
-    }
-
-    wrapped.forEach((line) => {
-      page.drawText(line, {
-        x: margin,
-        y,
-        size: fontSize,
-        font: notoFont,
-        color: rgb(0, 0, 0),
-      });
-      y -= lineHeight;
+    // 4. ✅ PDF sarlavha (Unicode belgilar ham ishlaydi)
+    const title = `📘 Savollar to‘plami (${date})`;
+    page.drawText(title, {
+      x: width / 2 - notoFont.widthOfTextAtSize(title, fontSize + 2) / 2,
+      y,
+      size: fontSize + 2,
+      font: notoFont,
+      color: rgb(0.1, 0.1, 0.6),
     });
+    y -= lineHeight;
 
-    question.options.forEach((opt, idx) => {
-      const optText = sanitizeText(opt.option_text + (opt.is_correct ? " ✓" : ""));
-      const wrappedOpt = wrapText(`${String.fromCharCode(65 + idx)}) ${optText}`, width - margin * 2);
+    // 5. ✅ Har bir savolni chiqarish
+    for (let i = 0; i < questions.length; i++) {
+      const question = questions[i];
+      const questionText = sanitizeText(`${i + 1}. ${question.question_text}`);
+      const wrapped = wrapText(questionText, width - margin * 2);
 
-      wrappedOpt.forEach((line) => {
+      // Sahifani to‘ldirib yubormaslik uchun yangi sahifa
+      if (y - wrapped.length * lineHeight < margin) {
+        page = pdfDoc.addPage([842, 595]);
+        y = height - margin;
+      }
+
+      // Savolni chiqarish
+      wrapped.forEach((line) => {
         page.drawText(line, {
-          x: margin + 10,
+          x: margin,
           y,
-          size: fontSize - 1,
+          size: fontSize,
           font: notoFont,
-          color: opt.is_correct ? rgb(0, 0.5, 0) : rgb(0.2, 0.2, 0.2),
+          color: rgb(0, 0, 0),
         });
         y -= lineHeight;
       });
-    });
 
-    y -= 10;
+      // Variantlar
+      question.options.forEach((opt, idx) => {
+        const optText = sanitizeText(opt.option_text + (opt.is_correct ? " ✓" : ""));
+        const wrappedOpt = wrapText(`${String.fromCharCode(65 + idx)}) ${optText}`, width - margin * 2);
+
+        wrappedOpt.forEach((line) => {
+          page.drawText(line, {
+            x: margin + 10,
+            y,
+            size: fontSize - 1,
+            font: notoFont,
+            color: opt.is_correct ? rgb(0, 0.5, 0) : rgb(0.2, 0.2, 0.2),
+          });
+          y -= lineHeight;
+        });
+      });
+
+      y -= 10; // Savol oralig‘i
+    }
+
+    // 6. ✅ PDF faylni saqlash va yuklab berish
+    const pdfBytes = await pdfDoc.save();
+    download(pdfBytes, `savollar-${date}.pdf`, "application/pdf");
+  } catch (error) {
+    console.error("PDF yuklashda xatolik:", error);
+    alert("PDF fayl yaratishda xatolik yuz berdi.");
   }
-
-  const pdfBytes = await pdfDoc.save();
-  download(pdfBytes, `savollar-${date}.pdf`, "application/pdf");
 };
+
 
 
   return (
