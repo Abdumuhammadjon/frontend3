@@ -1,4 +1,4 @@
-// components/GroupedQuestions.jsx (yoki pages/grouped-questions.js)
+ // components/GroupedQuestions.jsx (yoki pages/grouped-questions.js)
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/router';
@@ -67,13 +67,16 @@ const GroupedQuestions = ({ subjectId }) => {
         format: 'a4'
       });
 
-      // Custom fontni qo'llash
-      doc.setFont('NotoSans-Regular');  // Font nomi fontconverter'da ko'rsatilganicha
+      // Debug: Mavjud fontlarni ko'rish (browser konsolda chiqadi)
+      console.log('Mavjud fontlar:', doc.getFontList());
+
+      // Custom fontni qo'llash (style 'normal' bilan)
+      doc.setFont('NotoSans-Regular', 'normal');
 
       const pageWidth = doc.internal.pageSize.getWidth();
-      const margin = 40; // Chegarani ozgina kamaytirdim
+      const margin = 40;
       const maxWidth = pageWidth - 2 * margin;
-      let y = 40; // Yuqoridan biroz pastroqdan boshlash
+      let y = 40;
 
       // Sarlavha
       doc.setFontSize(18);
@@ -90,7 +93,6 @@ const GroupedQuestions = ({ subjectId }) => {
 
       // Savollarni yozish
       questions.forEach((q, i) => {
-        // Savol matni
         const questionText = `${i + 1}. ${q.question_text || ''}`;
         doc.setFontSize(14);
         doc.setTextColor(0, 0, 0);
@@ -101,46 +103,41 @@ const GroupedQuestions = ({ subjectId }) => {
             y = 40;
           }
           doc.text(line, margin, y);
-          y += 16; // Qator oralig'ini ozgina kamaytirdim
+          y += 16;
         });
         y += 10;
 
-        // Variantlar
         if (q.options) {
           q.options.forEach((opt, idx) => {
             const optionText = `${String.fromCharCode(97 + idx)}) ${opt.option_text}${opt.is_correct ? " ✓" : ""}`;
             doc.setFontSize(12);
             if (opt.is_correct) {
-              doc.setTextColor(0, 128, 0); // Yashil
+              doc.setTextColor(0, 128, 0);
             } else {
-              doc.setTextColor(51, 51, 51); // Kulrang
+              doc.setTextColor(51, 51, 51);
             }
-            const optionLines = doc.splitTextToSize(optionText, maxWidth - 20); // Indent uchun
+            const optionLines = doc.splitTextToSize(optionText, maxWidth - 20);
             optionLines.forEach(line => {
               if (y > doc.internal.pageSize.height - 40) {
                 doc.addPage();
                 y = 40;
               }
               doc.text(line, margin + 20, y);
-              y += 14; // Variantlar uchun oralig'ini kamaytirdim
+              y += 14;
             });
             y += 5;
           });
         }
 
-        y += 10; // Savollar oralig'ini ozgina kamaytirdim
+        y += 10;
 
-        // Yangi sahifa kerak bo'lsa
         if (y > doc.internal.pageSize.height - 40) {
           doc.addPage();
           y = 40;
         }
       });
 
-      // Rangni orqaga qaytarish
       doc.setTextColor(0, 0, 0);
-
-      // PDF saqlash
       doc.save(`savollar-${date}.pdf`);
     } catch (err) {
       setError("PDF yaratishda xatolik: " + err.message);
@@ -223,4 +220,4 @@ const GroupedQuestions = ({ subjectId }) => {
   );
 };
 
-export default GroupedQuestions;
+export default GroupedQuestions; //fff
