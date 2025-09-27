@@ -1,10 +1,10 @@
- // frontend/pages/GroupedQuestions.jsx
+// frontend/pages/GroupedQuestions.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import axios from "axios";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import font from "@/fonts/NotoSans-Regular.js"; // ✅ faqat bitta font import
+import font from "@/fonts/NotoSans-Regular.js"; // Base64 font string import
 import { Menu, Home, Users, BarChart, Settings, LogOut, Trash2 } from "lucide-react";
 
 const GroupedQuestions = ({ subjectId }) => {
@@ -18,19 +18,15 @@ const GroupedQuestions = ({ subjectId }) => {
 
   const router = useRouter();
 
-  // Matnni tozalash
+  // Matnni tozalash (null/undefined uchun ham)
   const sanitizeText = (text) => {
-    if (!text) return text;
-    return text
-      .replace(/'/g, "ʼ")
-      .replace(/"/g, "”")
-      .replace(/`/g, "´");
+    if (!text) return "";
+    return text.replace(/'/g, "ʼ").replace(/"/g, "”").replace(/`/g, "´");
   };
 
   // Boshlang‘ich yuklash
   useEffect(() => {
-    const storedSubjectId =
-      typeof window !== "undefined" ? localStorage.getItem("subjectId") : null;
+    const storedSubjectId = typeof window !== "undefined" ? localStorage.getItem("subjectId") : null;
     const idToUse = subjectId || storedSubjectId;
 
     if (!idToUse) {
@@ -52,11 +48,9 @@ const GroupedQuestions = ({ subjectId }) => {
   const fetchQuestions = async (idToUse) => {
     setLoading(true);
     try {
-      const response = await axios.get(
-        `https://backed1.onrender.com/api/subject/${idToUse}`,
-        { headers: { "Content-Type": "application/json" } }
-      );
-
+      const response = await axios.get(`https://backed1.onrender.com/api/subject/${idToUse}`, {
+        headers: { "Content-Type": "application/json" },
+      });
       const data = response.data;
 
       const grouped = data.reduce((acc, question) => {
@@ -70,8 +64,7 @@ const GroupedQuestions = ({ subjectId }) => {
       setError(null);
     } catch (err) {
       setError(
-        (err.response && err.response.data && err.response.data.error) ||
-          "Savollarni yuklashda xatolik"
+        (err.response && err.response.data && err.response.data.error) || "Savollarni yuklashda xatolik"
       );
     } finally {
       setLoading(false);
@@ -82,12 +75,11 @@ const GroupedQuestions = ({ subjectId }) => {
   const handleDeleteQuestion = async (questionId, date) => {
     if (!window.confirm("Bu savolni o'chirishni xohlaysizmi?")) return;
 
+    setLoading(true);
     try {
-      setLoading(true);
-      await axios.delete(
-        `https://backed1.onrender.com/api/question/${questionId}`,
-        { headers: { "Content-Type": "application/json" } }
-      );
+      await axios.delete(`https://backed1.onrender.com/api/question/${questionId}`, {
+        headers: { "Content-Type": "application/json" },
+      });
 
       setGroupedQuestions((prev) => {
         const updated = { ...prev };
@@ -98,8 +90,7 @@ const GroupedQuestions = ({ subjectId }) => {
       setError(null);
     } catch (err) {
       setError(
-        (err.response && err.response.data && err.response.data.error) ||
-          "Savolni o'chirishda xatolik"
+        (err.response && err.response.data && err.response.data.error) || "Savolni o'chirishda xatolik"
       );
     } finally {
       setLoading(false);
@@ -113,10 +104,9 @@ const GroupedQuestions = ({ subjectId }) => {
 
   // Chiqish
   const handleLogout = () => {
-    document.cookie.split(";").forEach(function (cookie) {
+    document.cookie.split(";").forEach((cookie) => {
       const name = cookie.split("=")[0].trim();
-      document.cookie =
-        name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+      document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
     });
 
     localStorage.clear();
@@ -150,18 +140,16 @@ const GroupedQuestions = ({ subjectId }) => {
     const margin = 15;
     let y = margin + 10;
 
-    // 🔹 Font ulash
+    // Font ulash
     addCustomFont(doc);
 
-    // 🔹 Sarlavha
+    // Sarlavha
     doc.setFontSize(10);
     doc.setTextColor(40, 60, 120);
-    doc.text(`📘 Savollar to‘plami (${date})`, pageWidth / 2, margin, {
-      align: "center",
-    });
+    doc.text(`📘 Savollar to‘plami (${date})`, pageWidth / 2, margin, { align: "center" });
     y += 10;
 
-    // 🔹 Har bir savolni yozish
+    // Har bir savolni yozish
     questions.forEach((q, index) => {
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
@@ -184,22 +172,21 @@ const GroupedQuestions = ({ subjectId }) => {
         sanitizeText(opt.option_text) + (opt.is_correct ? "  ✓" : ""),
       ]);
 
-    autoTable(doc, {
-  startY: y,
-  body: rows,
-  styles: { font: "NotoSans", fontSize: 10 },
-  theme: "grid",
-  margin: { left: margin, right: margin },
-  tableWidth: 'wrap', // albom shaklida moslashadi
-});
-
+      autoTable(doc, {
+        startY: y,
+        body: rows,
+        styles: { font: "NotoSans", fontSize: 10 },
+        theme: "grid",
+        margin: { left: margin, right: margin },
+        tableWidth: "wrap",
+      });
 
       if (doc.lastAutoTable && doc.lastAutoTable.finalY) {
         y = doc.lastAutoTable.finalY + 8;
       }
     });
 
-    // 🔹 Sahifa raqamlari
+    // Sahifa raqamlari
     const pageCount = doc.internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
