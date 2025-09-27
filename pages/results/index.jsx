@@ -64,7 +64,7 @@ const GroupedQuestions = ({ subjectId }) => {
   };
 
   // 🔹 PDF yuklab olish
-import { PDFDocument, rgb } from "pdf-lib";
+
 
 const handleDownloadPDFByDate = async (data) => {
   try {
