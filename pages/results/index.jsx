@@ -133,73 +133,80 @@ const GroupedQuestions = ({ subjectId }) => {
     });
 
   // PDF yuklab olish (standart font bilan)
-  const handleDownloadPDFByDate = (date, questions) => {
-    if (!questions || questions.length === 0) return;
+const handleDownloadPDFByDate = (date, questions) => {
+  if (!questions || questions.length === 0) return;
 
-    const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
-    const pageHeight = doc.internal.pageSize.height;
-    const pageWidth = doc.internal.pageSize.width;
-    const margin = 15;
-    let y = margin + 10;
+  const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
+  const pageHeight = doc.internal.pageSize.height;
+  const pageWidth = doc.internal.pageSize.width;
+  const margin = 15;
+  let y = margin + 10;
 
-    // Standart shrift: helvetica
-    doc.setFont("helvetica");
-    doc.setFontSize(10);
-    doc.setTextColor(40, 60, 120);
-    doc.text(`📘 Savollar to‘plami (${date})`, pageWidth / 2, margin, {
-      align: "center",
-    });
-    y += 10;
+  doc.setFont("helvetica");
+  doc.setFontSize(10); // Biroz kichik shrift
+  doc.setTextColor(40, 60, 120);
+  doc.text(`📘 Savollar to‘plami (${date})`, pageWidth / 2, margin, { align: "center" });
+  y += 8; // Oraliqni kamaytirdim (oldingi 10 edi)
 
-    questions.forEach((q, index) => {
-      doc.setFontSize(12);
-      doc.setTextColor(0, 0, 0);
+  questions.forEach((q, index) => {
+    doc.setFontSize(11); // Savol uchun kichikroq shrift
+    doc.setTextColor(0, 0, 0);
 
-      const questionText = sanitizeText(`${index + 1}. ${q.question_text}`);
-      const splitText = doc.splitTextToSize(questionText, pageWidth - margin * 2);
+    const questionText = sanitizeText(`${index + 1}. ${q.question_text}`);
+    const words = questionText.split(" ");
 
-      const neededHeight = splitText.length * 6;
-
-      if (y + neededHeight > pageHeight - margin) {
-        doc.addPage();
-        y = margin;
-      }
-
-      doc.text(splitText, margin, y);
-      y += neededHeight + 3;
-
-      // Variantlarni jadvalda chiqarish
-      const rows = q.options.map((opt) => [
-        sanitizeText(opt.option_text) + (opt.is_correct ? "  ✓" : ""),
-      ]);
-
-      autoTable(doc, {
-        startY: y,
-        body: rows,
-        styles: { font: "helvetica", fontSize: 10 },
-        theme: "grid",
-        margin: { left: margin, right: margin },
-        tableWidth: "wrap", // albom shaklida moslashadi
-      });
-
-      if (doc.lastAutoTable && doc.lastAutoTable.finalY) {
-        y = doc.lastAutoTable.finalY + 8;
-      }
-    });
-
-    // Sahifa raqamlari
-    const pageCount = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(10);
-      doc.setTextColor(100);
-      doc.text(`Sahifa ${i} / ${pageCount}`, pageWidth - 15, pageHeight - 5, {
-        align: "right",
-      });
+    let splitText = [];
+    for (let i = 0; i < words.length; i += 6) {
+      splitText.push(words.slice(i, i + 6).join(" "));
     }
 
-    doc.save(`savollar-${date}.pdf`);
-  };
+    const neededHeight = splitText.length * 5; // qator orasini biroz siqib qo'ydim (oldingi 6 edi)
+
+    if (y + neededHeight > pageHeight - margin) {
+      doc.addPage();
+      y = margin;
+    }
+
+    doc.text(splitText, margin, y);
+    y += neededHeight + 2; // variantlardan oldingi bo'shliqni kamaytirdim (oldingi 3 edi)
+
+    // Variantlar jadvali
+    const rows = q.options.map((opt) => [
+      sanitizeText(opt.option_text) + (opt.is_correct ? "  ✓" : ""),
+    ]);
+
+    autoTable(doc, {
+      startY: y,
+      body: rows,
+      styles: {
+        font: "helvetica",
+        fontSize: 9, // variantlar uchun kichik shrift
+        cellPadding: 2, // kataklar ichidagi bo'shliqni kamaytirdim
+        valign: "middle",
+      },
+      theme: "grid",
+      margin: { left: margin, right: margin },
+      tableWidth: "wrap",
+    });
+
+    if (doc.lastAutoTable && doc.lastAutoTable.finalY) {
+      y = doc.lastAutoTable.finalY + 5; // keyingi savol oldidan kichik bo'shliq
+    }
+  });
+
+  // Sahifa raqamlari
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Sahifa ${i} / ${pageCount}`, pageWidth - 15, pageHeight - 5, {
+      align: "right",
+    });
+  }
+
+  doc.save(`savollar-${date}.pdf`);
+};
 
   return (
     <div className="flex flex-col h-auto bg-gray-100">
