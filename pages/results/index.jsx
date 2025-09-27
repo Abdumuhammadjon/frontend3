@@ -1,3 +1,4 @@
+import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/router';
@@ -14,6 +15,7 @@ const GroupedQuestions = ({ subjectId }) => {
 
   const router = useRouter();
 
+  // 🔹 Savollarni olish
   useEffect(() => {
     const storedSubjectId = localStorage.getItem("subjectId");
     const idToUse = subjectId || storedSubjectId;
@@ -26,21 +28,25 @@ const GroupedQuestions = ({ subjectId }) => {
     }
   }, [subjectId, router]);
 
+  // 🔹 Scrollni tepaga qaytarish
   useEffect(() => {
     if (contentRef.current) {
       contentRef.current.scrollTop = 0;
     }
   }, [groupedQuestions, selectedDate]);
 
+  // 🔹 API dan savollarni olish
   const fetchQuestions = async (idToUse) => {
     setLoading(true);
     try {
-      const response = await axios.get(`https://backed1.onrender.com/api/subject/${idToUse}`, {
-        headers: { 'Content-Type': 'application/json' },
-      });
-      const data = response.data;
+      const response = await axios.get(
+        `https://backed1.onrender.com/api/subject/${idToUse}`,
+        { headers: { 'Content-Type': 'application/json' } }
+      );
 
-      const grouped = data.reduce((acc, question) => {
+      const datas = response.data;
+
+      const grouped = datas.reduce((acc, question) => {
         const date = new Date(question.created_at).toISOString().split('T')[0];
         if (!acc[date]) acc[date] = [];
         acc[date].push(question);
@@ -56,6 +62,94 @@ const GroupedQuestions = ({ subjectId }) => {
     }
   };
 
+  // 🔹 PDF yuklab olish
+  const handleDownloadPDFByDate = async (date) => {
+    const questions = groupedQuestions[date];
+    if (!questions || questions.length === 0) {
+      alert("Bu sanaga oid savollar topilmadi");
+      return;
+    }
+
+    function wrapText(text, maxWidth, font, fontSize) {
+      const words = text.split(" ");
+      const lines = [];
+      let currentLine = "";
+
+      for (let word of words) {
+        const testLine = currentLine ? currentLine + " " + word : word;
+        const width = font.widthOfTextAtSize(testLine, fontSize);
+        if (width <= maxWidth) {
+          currentLine = testLine;
+        } else {
+          if (currentLine) lines.push(currentLine);
+          currentLine = word;
+        }
+      }
+      if (currentLine) lines.push(currentLine);
+      return lines;
+    }
+
+    const pdfDoc = await PDFDocument.create();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+    let page = pdfDoc.addPage([842, 595]); // 🔄 Albom format
+    const { width, height } = page.getSize();
+
+    const fontSize = 12;
+    const lineHeight = fontSize + 4;
+    const maxWidth = width - 100;
+    let y = height - 50;
+
+    for (let q of questions) {
+      // Savol
+      const questionLines = wrapText(q.question_text, maxWidth, font, fontSize);
+      questionLines.forEach((line) => {
+        page.drawText(line, { x: 50, y, size: fontSize, font, color: rgb(0, 0, 0) });
+        y -= lineHeight;
+        if (y < 50) {
+          y = height - 50;
+          page = pdfDoc.addPage([842, 595]);
+        }
+      });
+
+      y -= lineHeight / 2;
+
+      // Variantlar
+      if (q.options && q.options.length > 0) {
+        q.options.forEach((opt) => {
+          const optionLines = wrapText(opt.option_text, maxWidth - 20, font, fontSize);
+          optionLines.forEach((line, idx) => {
+            page.drawText(idx === 0 ? `- ${line}` : `  ${line}`, {
+              x: 70,
+              y,
+              size: fontSize,
+              font,
+              color: opt.is_correct ? rgb(0, 0.6, 0) : rgb(0, 0, 0),
+            });
+            y -= lineHeight;
+            if (y < 50) {
+              y = height - 50;
+              page = pdfDoc.addPage([842, 595]);
+            }
+          });
+        });
+      }
+
+      y -= lineHeight;
+    }
+
+    const pdfBytes = await pdfDoc.save();
+    const blob = new Blob([pdfBytes], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `questions_${date}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // 🔹 Savolni o‘chirish
   const handleDeleteQuestion = async (questionId, date) => {
     if (!window.confirm("Bu savolni o'chirishni xohlaysizmi?")) return;
 
@@ -79,20 +173,8 @@ const GroupedQuestions = ({ subjectId }) => {
     }
   };
 
-  const handleSubjectClick = () => {
-    router.push("/questions");
-  };
-
-  const handleResultClick = () => {
-    router.push("/results");
-  };
-
-  const handleUserResultsClick = () => {
-    router.push("/UserResults");
-  };
-
   const handleLogout = () => {
-    document.cookie.split(";").forEach(function(cookie) {
+    document.cookie.split(";").forEach(function (cookie) {
       const name = cookie.split("=")[0].trim();
       document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
     });
@@ -111,99 +193,14 @@ const GroupedQuestions = ({ subjectId }) => {
     });
   };
 
-const handleDownloadPDFByDate = (date) => {
-  const questions = groupedQuestions[date];
-  if (!questions || questions.length === 0) return;
-console.log(date);
-
-  Promise.all([
-    import("jspdf"),
-    import("jspdf-autotable")
-  ]).then(([{ jsPDF }, autoTable]) => {
-    const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
-    doc.setFont("helvetica", "normal"); // <-- Yaxshi Unicode font
-    const pageHeight = doc.internal.pageSize.height;
-    const margin = 15;
-    let y = margin + 10;
-
-    const cleanText = (rawText) => {
-      if (!rawText) return '';
-      return rawText
-        .replace(/\u00A0/g, ' ')
-        .replace(/\u200B/g, '')
-        .replace(/[\u2000-\u200F]/g, '')
-        .replace(/[\uFEFF]/g, '')
-        .replace(/['"’‘“”]/g, "'")
-        .replace(/o[`'’"]/g, "o'")
-        .replace(/g[`'’"]/g, "g'")
-        .replace(/\s+/g, ' ')
-        .trim();
-    };
-
-    doc.setFontSize(16);
-    doc.setTextColor(40, 60, 120);
-    doc.text(`📘 Savollar to'plami (${formatDate(date)})`, doc.internal.pageSize.getWidth() / 2, margin, { align: "center" });
-    y += 10;
-
-    questions.forEach((q, index) => {
-      doc.setFontSize(12);
-      doc.setTextColor(0, 0, 0);
-
-      const questionText = `${index + 1}. ${cleanText(q.question_text)}`;
-      const splitQuestionText = doc.splitTextToSize(questionText, 260);
-      const questionHeight = splitQuestionText.length * 6;
-
-      if (y + questionHeight > pageHeight - margin) {
-        doc.addPage();
-        y = margin;
-      }
-
-      splitQuestionText.forEach(line => {
-        doc.text(line, margin, y);
-        y += 6;
-      });
-
-      y += 3;
-
-      q.options.forEach(opt => {
-        const optionText = (opt.is_correct ? "✓ " : "") + cleanText(opt.option_text);
-        const splitOptionText = doc.splitTextToSize(optionText, 250);
-        const optionHeight = splitOptionText.length * 6;
-
-        if (y + optionHeight > pageHeight - margin) {
-          doc.addPage();
-          y = margin;
-        }
-
-        splitOptionText.forEach(line => {
-          doc.text("•", margin + 5, y);
-          doc.text(line, margin + 10, y);
-          y += 6;
-        });
-
-        y += 2;
-      });
-
-      y += 5;
-    });
-
-    doc.save(`savollar_${date}.pdf`);
-  });
-};
-
-
-
-
   return (
     <div className="flex flex-col h-auto bg-gray-100">
-      {/* 🔥 Loader Overlay */}
       {loading && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[9999]">
           <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
         </div>
       )}
 
-      {/* Navbar */}
       <div className="bg-white shadow-md h-16 flex items-center px-6 fixed w-full z-50 top-0">
         <h1 className="text-2xl font-bold text-gray-800">Savollar Bazasi</h1>
       </div>
@@ -215,13 +212,13 @@ console.log(date);
             <Menu size={24} />
           </button>
           <ul className="space-y-4">
-            <li className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer" onClick={handleSubjectClick}>
+            <li className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer" onClick={() => router.push("/questions")}>
               <Home size={24} /> {isSidebarOpen && "Bosh sahifa"}
             </li>
-            <li className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer" onClick={handleResultClick}>
+            <li className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer" onClick={() => router.push("/results")}>
               <Users size={24} /> {isSidebarOpen && "Foydalanuvchilar"}
             </li>
-            <li className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer" onClick={handleUserResultsClick}>
+            <li className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer" onClick={() => router.push("/UserResults")}>
               <BarChart size={24} /> {isSidebarOpen && "Hisobotlar"}
             </li>
             <li className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg cursor-pointer">
@@ -276,7 +273,7 @@ console.log(date);
                           <div className="p-3 bg-gray-50 rounded-lg">
                             <p className="font-bold text-gray-900">{question.question_text}</p>
                             <ul className="mt-2 space-y-2">
-                              {question.options.map((option) => (
+                              {question.options?.map((option) => (
                                 <li
                                   key={option.id}
                                   className={`p-2 rounded-lg ${option.is_correct ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-800'}`}
@@ -304,3 +301,4 @@ console.log(date);
 };
 
 export default GroupedQuestions;
+ 
