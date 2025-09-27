@@ -67,19 +67,25 @@ const GroupedQuestions = ({ subjectId }) => {
   // 🔹 PDF yuklab olish
 
 
+
 const handleDownloadPDFByDate = async (data) => {
   try {
-    // Yangi PDF yaratamiz
+    // PDF yaratamiz
     const pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage([842, 595]); // A4 landscape (albom shakli)
 
-    // Shriftni yuklash
+    // fontkit ni ro‘yxatdan o‘tkazamiz
+    pdfDoc.registerFontkit(fontkit);
+
+    // Sahifa qo‘shamiz
+    const page = pdfDoc.addPage([842, 595]); // A4 landscape
+    const { height } = page.getSize();
+
+    // Custom shriftni yuklash
     const fontUrl = "/fonts/NotoSans-Regular.ttf";
     const fontBytes = await fetch(fontUrl).then((res) => res.arrayBuffer());
     const customFont = await pdfDoc.embedFont(fontBytes);
 
-    const { height } = page.getSize();
-    let y = height - 50; // yuqoridan boshlaymiz
+    let y = height - 50;
 
     // Title
     page.drawText("Savollar ro'yxati", {
@@ -91,7 +97,7 @@ const handleDownloadPDFByDate = async (data) => {
     });
     y -= 40;
 
-    // Savollar va variantlar
+    // Savollar
     data.forEach((item, index) => {
       const question = `${index + 1}. ${item.question}`;
       page.drawText(question, {
@@ -103,7 +109,6 @@ const handleDownloadPDFByDate = async (data) => {
       });
       y -= 25;
 
-      // Variantlar
       item.options.forEach((option, i) => {
         page.drawText(`   ${String.fromCharCode(97 + i)}) ${option}`, {
           x: 70,
@@ -115,18 +120,15 @@ const handleDownloadPDFByDate = async (data) => {
         y -= 20;
       });
 
-      y -= 10; // har savoldan keyin bo'sh joy
+      y -= 10;
       if (y < 100) {
-        // Sahifa tugasa yangi sahifa
         y = height - 50;
         pdfDoc.addPage([842, 595]);
       }
     });
 
-    // PDF ni yaratamiz
+    // PDF saqlash
     const pdfBytes = await pdfDoc.save();
-
-    // Yuklab berish
     const blob = new Blob([pdfBytes], { type: "application/pdf" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
