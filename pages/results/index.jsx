@@ -114,6 +114,7 @@ const GroupedQuestions = ({ subjectId }) => {
 const handleDownloadPDFByDate = (date) => {
   const questions = groupedQuestions[date];
   if (!questions || questions.length === 0) return;
+console.log(date);
 
   Promise.all([
     import("jspdf"),
