@@ -135,14 +135,16 @@ const GroupedQuestions = ({ subjectId }) => {
       day: "numeric",
     });
 
-  // PDF yuklab olish (standart font bilan)
- const handleDownloadPDFByDate = async (date, questions) => {
+const handleDownloadPDFByDate = async (date, questions) => {
   if (!questions || questions.length === 0) return;
 
+  const fontUrl = '/fonts/NotoSans-Regular.ttf';
+  const fontBytes = await fetch(fontUrl).then(res => res.arrayBuffer());
+
   const pdfDoc = await PDFDocument.create();
-  const page = pdfDoc.addPage([842, 595]); // A4 landscape
+  const notoFont = await pdfDoc.embedFont(fontBytes);
+  let page = pdfDoc.addPage([842, 595]); // A4 landscape
   const { width, height } = page.getSize();
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
   const fontSize = 11;
   const lineHeight = 18;
@@ -155,7 +157,7 @@ const GroupedQuestions = ({ subjectId }) => {
     let line = "";
     for (let word of words) {
       const testLine = line + word + " ";
-      const testWidth = font.widthOfTextAtSize(testLine, fontSize);
+      const testWidth = notoFont.widthOfTextAtSize(testLine, fontSize);
       if (testWidth > maxWidth) {
         lines.push(line.trim());
         line = word + " ";
@@ -167,14 +169,15 @@ const GroupedQuestions = ({ subjectId }) => {
     return lines;
   };
 
-  page.drawText(`📘 Savollar to‘plami (${date})`, {
-    x: width / 2 - font.widthOfTextAtSize(`📘 Savollar to‘plami (${date})`, fontSize) / 2,
+  // Header
+  const title = `📘 Savollar to‘plami (${date})`;
+  page.drawText(title, {
+    x: width / 2 - notoFont.widthOfTextAtSize(title, fontSize + 2) / 2,
     y,
     size: fontSize + 2,
-    font,
+    font: notoFont,
     color: rgb(0.1, 0.1, 0.6),
   });
-
   y -= lineHeight;
 
   for (let i = 0; i < questions.length; i++) {
@@ -183,9 +186,8 @@ const GroupedQuestions = ({ subjectId }) => {
     const wrapped = wrapText(questionText, width - margin * 2);
 
     if (y - wrapped.length * lineHeight < margin) {
-      const newPage = pdfDoc.addPage([842, 595]);
+      page = pdfDoc.addPage([842, 595]);
       y = height - margin;
-      page = newPage;
     }
 
     wrapped.forEach((line) => {
@@ -193,13 +195,12 @@ const GroupedQuestions = ({ subjectId }) => {
         x: margin,
         y,
         size: fontSize,
-        font,
+        font: notoFont,
         color: rgb(0, 0, 0),
       });
       y -= lineHeight;
     });
 
-    // Options
     question.options.forEach((opt, idx) => {
       const optText = sanitizeText(opt.option_text + (opt.is_correct ? " ✓" : ""));
       const wrappedOpt = wrapText(`${String.fromCharCode(65 + idx)}) ${optText}`, width - margin * 2);
@@ -209,14 +210,14 @@ const GroupedQuestions = ({ subjectId }) => {
           x: margin + 10,
           y,
           size: fontSize - 1,
-          font,
+          font: notoFont,
           color: opt.is_correct ? rgb(0, 0.5, 0) : rgb(0.2, 0.2, 0.2),
         });
         y -= lineHeight;
       });
     });
 
-    y -= 10; // bo'sh joy
+    y -= 10;
   }
 
   const pdfBytes = await pdfDoc.save();
