@@ -67,17 +67,23 @@ const GroupedQuestions = ({ subjectId }) => {
 
 
 
+const handleDownloadPDFByDate = async (date) => {
+  const questions = groupedQuestions[date]; // ✅ shu kunning savollar ro‘yxati (array)
 
-const handleDownloadPDFByDate = async (data) => {
+  if (!Array.isArray(questions)) {
+    console.error("Data massiv emas:", questions);
+    return;
+  }
+
   const pdfDoc = await PDFDocument.create();
-  const page = pdfDoc.addPage([842, 595]);
+  const page = pdfDoc.addPage([842, 595]); // A4 landscape
   const { height } = page.getSize();
 
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica); // ✅ fontkit kerak emas
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
   let y = height - 50;
 
-  page.drawText("Savollar ro'yxati", {
+  page.drawText(`📄 Savollar to‘plami (${date})`, {
     x: 50,
     y,
     size: 18,
@@ -85,10 +91,10 @@ const handleDownloadPDFByDate = async (data) => {
     color: rgb(0, 0, 0),
   });
 
-  // savollar va variantlar
-  data.forEach((item, index) => {
+  // 🔹 Savollar va variantlar
+  questions.forEach((item, index) => {
     y -= 30;
-    page.drawText(`${index + 1}. ${item.question}`, {
+    page.drawText(`${index + 1}. ${item.question_text}`, {
       x: 50,
       y,
       size: 14,
@@ -98,7 +104,7 @@ const handleDownloadPDFByDate = async (data) => {
 
     item.options.forEach((option, i) => {
       y -= 20;
-      page.drawText(`   ${String.fromCharCode(97 + i)}) ${option}`, {
+      page.drawText(`   ${String.fromCharCode(97 + i)}) ${option.option_text}`, {
         x: 70,
         y,
         size: 12,
@@ -108,14 +114,15 @@ const handleDownloadPDFByDate = async (data) => {
     });
   });
 
+  // 🔹 PDF saqlash
   const pdfBytes = await pdfDoc.save();
   const blob = new Blob([pdfBytes], { type: "application/pdf" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.download = "savollar.pdf";
+  link.download = `savollar-${date}.pdf`;
   link.click();
 };
- // ishlasin
+
 
 
   // 🔹 Savolni o‘chirish
