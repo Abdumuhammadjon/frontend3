@@ -1,4 +1,4 @@
- // components/GroupedQuestions.jsx (yoki pages/grouped-questions.js)
+// components/GroupedQuestions.jsx (yoki pages/grouped-questions.js)
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/router';
@@ -55,7 +55,7 @@ const GroupedQuestions = ({ subjectId }) => {
     }
   };
 
-  // PDF yuklash funksiyasi (client-side jspdf bilan, custom font bilan, matnni qatorlarga bo'lish bilan)
+  // PDF yuklash funksiyasi (client-side jspdf bilan, matnni qatorlarga bo'lish bilan)
   async function handleDownloadPDFByDate(date) {
     const questions = groupedQuestions[date];
     if (!questions || questions.length === 0) return;
@@ -71,18 +71,22 @@ const GroupedQuestions = ({ subjectId }) => {
       doc.setFont('NotoSans-Regular');  // Font nomi fontconverter'da ko'rsatilganicha
 
       const pageWidth = doc.internal.pageSize.getWidth();
-      const margin = 50;
+      const margin = 40; // Chegarani ozgina kamaytirdim
       const maxWidth = pageWidth - 2 * margin;
-      let y = 50;
+      let y = 40; // Yuqoridan biroz pastroqdan boshlash
 
       // Sarlavha
       doc.setFontSize(18);
       const titleLines = doc.splitTextToSize("Savollar ro'yxati", maxWidth);
       titleLines.forEach(line => {
+        if (y > doc.internal.pageSize.height - 40) {
+          doc.addPage();
+          y = 40;
+        }
         doc.text(line, margin, y);
-        y += 20;  // Qator oralig'i
+        y += 20;
       });
-      y += 20;  // Qo'shimcha bo'shliq
+      y += 15;
 
       // Savollarni yozish
       questions.forEach((q, i) => {
@@ -92,14 +96,14 @@ const GroupedQuestions = ({ subjectId }) => {
         doc.setTextColor(0, 0, 0);
         const questionLines = doc.splitTextToSize(questionText, maxWidth);
         questionLines.forEach(line => {
-          if (y > doc.internal.pageSize.height - 50) {
+          if (y > doc.internal.pageSize.height - 40) {
             doc.addPage();
-            y = 50;
+            y = 40;
           }
           doc.text(line, margin, y);
-          y += 18;  // Qator oralig'i
+          y += 16; // Qator oralig'ini ozgina kamaytirdim
         });
-        y += 10;  // Variantlar oldidan bo'shliq
+        y += 10;
 
         // Variantlar
         if (q.options) {
@@ -107,29 +111,29 @@ const GroupedQuestions = ({ subjectId }) => {
             const optionText = `${String.fromCharCode(97 + idx)}) ${opt.option_text}${opt.is_correct ? " ✓" : ""}`;
             doc.setFontSize(12);
             if (opt.is_correct) {
-              doc.setTextColor(0, 128, 0);  // Yashil
+              doc.setTextColor(0, 128, 0); // Yashil
             } else {
-              doc.setTextColor(51, 51, 51);  // Kulrang
+              doc.setTextColor(51, 51, 51); // Kulrang
             }
-            const optionLines = doc.splitTextToSize(optionText, maxWidth - 20);  // Indent uchun kamroq kenglik
+            const optionLines = doc.splitTextToSize(optionText, maxWidth - 20); // Indent uchun
             optionLines.forEach(line => {
-              if (y > doc.internal.pageSize.height - 50) {
+              if (y > doc.internal.pageSize.height - 40) {
                 doc.addPage();
-                y = 50;
+                y = 40;
               }
-              doc.text(line, margin + 20, y);  // Indent
-              y += 16;  // Qator oralig'i
+              doc.text(line, margin + 20, y);
+              y += 14; // Variantlar uchun oralig'ini kamaytirdim
             });
-            y += 5;  // Keyingi variant oldidan bo'shliq
+            y += 5;
           });
         }
 
-        y += 15;  // Keyingi savol oldidan bo'shliq
+        y += 10; // Savollar oralig'ini ozgina kamaytirdim
 
         // Yangi sahifa kerak bo'lsa
-        if (y > doc.internal.pageSize.height - 50) {
+        if (y > doc.internal.pageSize.height - 40) {
           doc.addPage();
-          y = 50;
+          y = 40;
         }
       });
 
