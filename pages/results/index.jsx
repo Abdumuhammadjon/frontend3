@@ -120,11 +120,25 @@ const handleDownloadPDFByDate = (date) => {
     import("jspdf-autotable")
   ]).then(([{ jsPDF }, autoTable]) => {
     const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
+    doc.setFont("helvetica", "normal"); // <-- Yaxshi Unicode font
     const pageHeight = doc.internal.pageSize.height;
     const margin = 15;
     let y = margin + 10;
 
-    // Sarlavha
+    const cleanText = (rawText) => {
+      if (!rawText) return '';
+      return rawText
+        .replace(/\u00A0/g, ' ')
+        .replace(/\u200B/g, '')
+        .replace(/[\u2000-\u200F]/g, '')
+        .replace(/[\uFEFF]/g, '')
+        .replace(/['"’‘“”]/g, "'")
+        .replace(/o[`'’"]/g, "o'")
+        .replace(/g[`'’"]/g, "g'")
+        .replace(/\s+/g, ' ')
+        .trim();
+    };
+
     doc.setFontSize(16);
     doc.setTextColor(40, 60, 120);
     doc.text(`📘 Savollar to'plami (${formatDate(date)})`, doc.internal.pageSize.getWidth() / 2, margin, { align: "center" });
@@ -134,7 +148,7 @@ const handleDownloadPDFByDate = (date) => {
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
 
-      const questionText = `${index + 1}. ${q.question_text}`;
+      const questionText = `${index + 1}. ${cleanText(q.question_text)}`;
       const splitQuestionText = doc.splitTextToSize(questionText, 260);
       const questionHeight = splitQuestionText.length * 6;
 
@@ -143,12 +157,16 @@ const handleDownloadPDFByDate = (date) => {
         y = margin;
       }
 
-      doc.text(splitQuestionText, margin, y);
-      y += questionHeight + 3;
+      splitQuestionText.forEach(line => {
+        doc.text(line, margin, y);
+        y += 6;
+      });
+
+      y += 3;
 
       q.options.forEach(opt => {
-        const optionText = (opt.is_correct ? "✓ " : "") + opt.option_text;
-        const splitOptionText = doc.splitTextToSize(optionText, 260);
+        const optionText = (opt.is_correct ? "✓ " : "") + cleanText(opt.option_text);
+        const splitOptionText = doc.splitTextToSize(optionText, 250);
         const optionHeight = splitOptionText.length * 6;
 
         if (y + optionHeight > pageHeight - margin) {
@@ -156,25 +174,22 @@ const handleDownloadPDFByDate = (date) => {
           y = margin;
         }
 
-        doc.text("•", margin + 5, y);
-        doc.text(splitOptionText, margin + 10, y);
-        y += optionHeight + 2;
+        splitOptionText.forEach(line => {
+          doc.text("•", margin + 5, y);
+          doc.text(line, margin + 10, y);
+          y += 6;
+        });
+
+        y += 2;
       });
 
       y += 5;
     });
 
-    const pageCount = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(10);
-      doc.setTextColor(100);
-      doc.text(`Sahifa ${i} / ${pageCount}`, doc.internal.pageSize.getWidth() - margin, pageHeight - 5, { align: "right" });
-    }
-
-    doc.save(`savollar-${date}.pdf`);
+    doc.save(`savollar_${date}.pdf`);
   });
 };
+
 
 
 
