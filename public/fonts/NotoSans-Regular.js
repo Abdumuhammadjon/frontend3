@@ -1,3 +1,9 @@
-const font = "BASE64_STRING_HERE";  // Bu yerda bitta qatorda, ortiqcha bo‘sh joylarsiz
 
-export default font;
+
+﻿import { jsPDF } from "jspdf"
+var font = 'undefined';
+var callAddFont = function () {
+this.addFileToVFS('NotoSans-Regular-normal.ttf', font);
+this.addFont('NotoSans-Regular-normal.ttf', 'NotoSans-Regular', 'normal');
+};
+jsPDF.API.events.push(['addFonts', callAddFont])
