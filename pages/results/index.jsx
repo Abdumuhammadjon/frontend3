@@ -5,6 +5,9 @@ import axios from "axios";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Menu, Home, Users, BarChart, Settings, LogOut, Trash2 } from "lucide-react";
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import download from 'downloadjs';
+
 
 const GroupedQuestions = ({ subjectId }) => {
   const [groupedQuestions, setGroupedQuestions] = useState({});
@@ -133,73 +136,93 @@ const GroupedQuestions = ({ subjectId }) => {
     });
 
   // PDF yuklab olish (standart font bilan)
-  const handleDownloadPDFByDate = (date, questions) => {
-    if (!questions || questions.length === 0) return;
+ const handleDownloadPDFByDate = async (date, questions) => {
+  if (!questions || questions.length === 0) return;
 
-    const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
-    const pageHeight = doc.internal.pageSize.height;
-    const pageWidth = doc.internal.pageSize.width;
-    const margin = 15;
-    let y = margin + 10;
+  const pdfDoc = await PDFDocument.create();
+  const page = pdfDoc.addPage([842, 595]); // A4 landscape
+  const { width, height } = page.getSize();
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-    // Standart shrift: helvetica
-    doc.setFont("helvetica");
-    doc.setFontSize(10);
-    doc.setTextColor(40, 60, 120);
-    doc.text(`📘 Savollar to‘plami (${date})`, pageWidth / 2, margin, {
-      align: "center",
-    });
-    y += 10;
+  const fontSize = 11;
+  const lineHeight = 18;
+  const margin = 40;
+  let y = height - margin;
 
-    questions.forEach((q, index) => {
-      doc.setFontSize(12);
-      doc.setTextColor(0, 0, 0);
-
-      const questionText = sanitizeText(`${index + 1}. ${q.question_text}`);
-      const splitText = doc.splitTextToSize(questionText, pageWidth - margin * 2);
-
-      const neededHeight = splitText.length * 6;
-
-      if (y + neededHeight > pageHeight - margin) {
-        doc.addPage();
-        y = margin;
+  const wrapText = (text, maxWidth) => {
+    const words = text.split(" ");
+    const lines = [];
+    let line = "";
+    for (let word of words) {
+      const testLine = line + word + " ";
+      const testWidth = font.widthOfTextAtSize(testLine, fontSize);
+      if (testWidth > maxWidth) {
+        lines.push(line.trim());
+        line = word + " ";
+      } else {
+        line = testLine;
       }
+    }
+    lines.push(line.trim());
+    return lines;
+  };
 
-      doc.text(splitText, margin, y);
-      y += neededHeight + 3;
+  page.drawText(`📘 Savollar to‘plami (${date})`, {
+    x: width / 2 - font.widthOfTextAtSize(`📘 Savollar to‘plami (${date})`, fontSize) / 2,
+    y,
+    size: fontSize + 2,
+    font,
+    color: rgb(0.1, 0.1, 0.6),
+  });
 
-      // Variantlarni jadvalda chiqarish
-      const rows = q.options.map((opt) => [
-        sanitizeText(opt.option_text) + (opt.is_correct ? "  ✓" : ""),
-      ]);
+  y -= lineHeight;
 
-      autoTable(doc, {
-        startY: y,
-        body: rows,
-        styles: { font: "helvetica", fontSize: 10 },
-        theme: "grid",
-        margin: { left: margin, right: margin },
-        tableWidth: "wrap", // albom shaklida moslashadi
-      });
+  for (let i = 0; i < questions.length; i++) {
+    const question = questions[i];
+    const questionText = sanitizeText(`${i + 1}. ${question.question_text}`);
+    const wrapped = wrapText(questionText, width - margin * 2);
 
-      if (doc.lastAutoTable && doc.lastAutoTable.finalY) {
-        y = doc.lastAutoTable.finalY + 8;
-      }
-    });
-
-    // Sahifa raqamlari
-    const pageCount = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(10);
-      doc.setTextColor(100);
-      doc.text(`Sahifa ${i} / ${pageCount}`, pageWidth - 15, pageHeight - 5, {
-        align: "right",
-      });
+    if (y - wrapped.length * lineHeight < margin) {
+      const newPage = pdfDoc.addPage([842, 595]);
+      y = height - margin;
+      page = newPage;
     }
 
-    doc.save(`savollar-${date}.pdf`);
-  };
+    wrapped.forEach((line) => {
+      page.drawText(line, {
+        x: margin,
+        y,
+        size: fontSize,
+        font,
+        color: rgb(0, 0, 0),
+      });
+      y -= lineHeight;
+    });
+
+    // Options
+    question.options.forEach((opt, idx) => {
+      const optText = sanitizeText(opt.option_text + (opt.is_correct ? " ✓" : ""));
+      const wrappedOpt = wrapText(`${String.fromCharCode(65 + idx)}) ${optText}`, width - margin * 2);
+
+      wrappedOpt.forEach((line) => {
+        page.drawText(line, {
+          x: margin + 10,
+          y,
+          size: fontSize - 1,
+          font,
+          color: opt.is_correct ? rgb(0, 0.5, 0) : rgb(0.2, 0.2, 0.2),
+        });
+        y -= lineHeight;
+      });
+    });
+
+    y -= 10; // bo'sh joy
+  }
+
+  const pdfBytes = await pdfDoc.save();
+  download(pdfBytes, `savollar-${date}.pdf`, "application/pdf");
+};
+
 
   return (
     <div className="flex flex-col h-auto bg-gray-100">
