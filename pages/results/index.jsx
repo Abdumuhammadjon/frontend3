@@ -63,7 +63,7 @@ const generateQuestionPDF = (date, questions) => {
   const doc = new jsPDF({
     unit: "mm",
     format: "a4",
-    orientation: "portrait", // ✅ Kitob shakli
+    orientation: "portrait",
   });
 
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -71,9 +71,10 @@ const generateQuestionPDF = (date, questions) => {
   const margin = 20;
   let y = margin;
 
+  // Header
   doc.setFont("helvetica", "bold");
   doc.setFontSize(14);
-  doc.setTextColor(40, 40, 40);
+  doc.setTextColor(33, 33, 33);
   doc.text(`📘 Savollar to‘plami (${date})`, pageWidth / 2, y, {
     align: "center",
   });
@@ -87,15 +88,16 @@ const generateQuestionPDF = (date, questions) => {
     const lineHeight = 7;
     const questionHeight = questionLines.length * lineHeight + 5;
 
-    if (y + questionHeight > pageHeight - margin) {
+    // Yangi sahifa kerak bo‘lsa
+    if (y + questionHeight + 30 > pageHeight - margin) {
       doc.addPage();
       y = margin;
     }
 
-    doc.setFont("helvetica", "normal");
+    // 🔹 Savol matni
+    doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
-    doc.setTextColor(20);
-
+    doc.setTextColor(0, 0, 0);
     questionLines.forEach((line) => {
       doc.text(line, margin, y);
       y += lineHeight;
@@ -103,25 +105,29 @@ const generateQuestionPDF = (date, questions) => {
 
     y += 2;
 
+    // 🔸 Variantlar (ichkariga surilgan, ajratilgan)
     q.options.forEach((opt, idx) => {
-      const prefix = String.fromCharCode(65 + idx);
+      const prefix = String.fromCharCode(65 + idx); // A, B, C...
       const isCorrect = opt.is_correct ? " ✓" : "";
       const optionText = `${prefix}) ${sanitizeText(opt.option_text)}${isCorrect}`;
 
-      if (y + lineHeight > pageHeight - margin) {
-        doc.addPage();
-        y = margin;
-      }
-
       doc.setFont("helvetica", opt.is_correct ? "bold" : "normal");
-      doc.setTextColor(opt.is_correct ? "green" : "black");
-      doc.text(optionText, margin + 10, y);
-      y += lineHeight;
+      doc.setFontSize(11);
+      doc.setTextColor(opt.is_correct ? "green" : "#333");
+
+      doc.text(optionText, margin + 8, y);
+      y += 6;
     });
 
-    y += 10; // 🔹 Savollar orasida bo‘sh joy
+    // 🔻 Savollarni ajratish uchun chiziq yoki bo‘sh joy
+    y += 4;
+    doc.setDrawColor(180);
+    doc.setLineWidth(0.3);
+    doc.line(margin, y, pageWidth - margin, y); // chiziq
+    y += 6;
   });
 
+  // Footer: sahifa raqami
   const pageCount = doc.internal.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
@@ -134,6 +140,7 @@ const generateQuestionPDF = (date, questions) => {
 
   doc.save(`savollar-${date}.pdf`);
 };
+
 
   // === LIFECYCLE ===
 
