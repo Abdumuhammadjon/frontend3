@@ -1,21 +1,11 @@
- // Bu fayl: components/GroupedQuestions.jsx (yoki pages/grouped-questions.js)
-// jsPDF bilan client-side PDF yaratish. Custom font uchun fontconverter orqali tayyorlangan js faylini qo'shing.
-// 1. https://rawgit.com/MrRio/jsPDF/master/fontconverter/fontconverter.html saytiga kiring, NotoSans-Regular.ttf ni yuklang, "normal" ni tanlang.
-// 2. Chiqqan kodni public/fonts/NotoSans-Regular.js fayliga saqlang (masalan):
-// var callAddFont = function () {
-//   this.addFileToVFS('NotoSans-Regular-normal.ttf', 'base64_string_here');
-//   this.addFont('NotoSans-Regular-normal.ttf', 'NotoSans-Regular', 'normal');
-// };
-// jsPDF.callAddFont = callAddFont;  // jsPDF ni import qilgan joyda bu funksiyani chaqiring.
-// 3. Komponentda import qiling: import './fonts/NotoSans-Regular.js';  // public emas, src/fonts papkasida bo'lsa.
-
+ // components/GroupedQuestions.jsx (yoki pages/grouped-questions.js)
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/router';
 import jsPDF from 'jspdf';
 
-// Custom font js faylini import qiling (loyihangizda yarating)
-import '../fonts/NotoSans-Regular.js';  // Yo'lni to'g'rilan
+// Custom font js faylini public/fonts dan import qilish
+import '/fonts/NotoSans-Regular.js';  // public/fonts/NotoSans-Regular.js
 
 const GroupedQuestions = ({ subjectId }) => {
   const [groupedQuestions, setGroupedQuestions] = useState({});
@@ -77,7 +67,7 @@ const GroupedQuestions = ({ subjectId }) => {
         format: 'a4'
       });
 
-      // Custom fontni qo'llash (fontconverter orqali tayyorlangan)
+      // Custom fontni qo'llash
       doc.setFont('NotoSans-Regular');  // Font nomi fontconverter'da ko'rsatilganicha
 
       let y = 50;
@@ -99,7 +89,7 @@ const GroupedQuestions = ({ subjectId }) => {
           q.options.forEach((opt, idx) => {
             const optionText = `   ${String.fromCharCode(97 + idx)}) ${opt.option_text}${opt.is_correct ? " ✓" : ""}`;
             doc.setFontSize(12);
-            // Ranglarni to'g'ri berish: sonlar, string emas
+            // Ranglarni to'g'ri berish
             if (opt.is_correct) {
               doc.setTextColor(0, 128, 0);  // Yashil
             } else {
@@ -119,7 +109,7 @@ const GroupedQuestions = ({ subjectId }) => {
         }
       });
 
-      // Rangni orqaga qaytarish (ixtiyoriy)
+      // Rangni orqaga qaytarish
       doc.setTextColor(0, 0, 0);
 
       // PDF saqlash
@@ -167,7 +157,7 @@ const GroupedQuestions = ({ subjectId }) => {
         {Object.keys(groupedQuestions).length === 0 ? (
           <p>Savollar yo‘q</p>
         ) : (
-          Object.keys(groupedQuestions).sort().reverse().map((date) => (  // Eng yangisini yuqoriga
+          Object.keys(groupedQuestions).sort().reverse().map((date) => (
             <div key={date} className="mb-4 w-full">
               <button
                 onClick={() => setSelectedDate(selectedDate === date ? null : date)}
