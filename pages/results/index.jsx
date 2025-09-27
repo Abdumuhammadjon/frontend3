@@ -1,22 +1,17 @@
-import { PDFDocument, rgb } from "pdf-lib";
-import fontkit from "@pdf-lib/fontkit";
-import React, { useState, useEffect, useRef } from 'react';
+// components/GroupedQuestions.jsx (yoki pages/grouped-questions.js agar dynamic bo'lsa)
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/router';
-import { Menu, Home, Users, BarChart, Settings, LogOut, Trash2 } from 'lucide-react';
 
 const GroupedQuestions = ({ subjectId }) => {
   const [groupedQuestions, setGroupedQuestions] = useState({});
   const [selectedDate, setSelectedDate] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const contentRef = useRef(null);
-
   const router = useRouter();
 
-  // 🔹 Savollarni olish
+  // Savollarni olish
   useEffect(() => {
     const storedSubjectId = localStorage.getItem("subjectId");
     const idToUse = subjectId || storedSubjectId;
@@ -29,7 +24,7 @@ const GroupedQuestions = ({ subjectId }) => {
     }
   }, [subjectId, router]);
 
-  // 🔹 API dan savollarni olish
+  // API dan savollarni olish
   const fetchQuestions = async (idToUse) => {
     setLoading(true);
     try {
@@ -56,70 +51,34 @@ const GroupedQuestions = ({ subjectId }) => {
     }
   };
 
-  // 🔹 PDF yaratish funksiyasi
+  // PDF yuklash funksiyasi (server tomoniga o'tkazilgan)
   async function handleDownloadPDFByDate(date) {
     const questions = groupedQuestions[date];
     if (!questions || questions.length === 0) return;
 
-    const pdfDoc = await PDFDocument.create();
-    pdfDoc.registerFontkit(fontkit);
-
-    // ✅ Fontni to‘g‘ri yuklash (public papkadan)
-    const fontBytes = await fetch("/NotoSans-Regular.ttf").then(res => res.arrayBuffer());
-    const customFont = await pdfDoc.embedFont(fontBytes);
-
-    const page = pdfDoc.addPage([842, 595]); // A4 landscape
-    const { height } = page.getSize();
-    let y = height - 50;
-
-    // Sarlavha
-    page.drawText("Savollar ro'yxati", {
-      x: 50,
-      y,
-      size: 18,
-      font: customFont,
-      color: rgb(0, 0, 0),
-    });
-
-    y -= 40;
-
-    // Savollarni yozish
-    questions.forEach((q, i) => {
-      const safeText = String(q.question_text || "").replace(/[^\x00-\x7F]/g, ""); // emoji -> bo‘sh
-      page.drawText(`${i + 1}. ${safeText}`, {
-        x: 50,
-        y,
-        size: 14,
-        font: customFont,
-        color: rgb(0, 0, 0),
-      });
-      y -= 25;
-
-      // Variantlar
-      q.options?.forEach((opt, idx) => {
-        page.drawText(`   ${String.fromCharCode(97 + idx)}) ${opt.option_text}${opt.is_correct ? " ✓" : ""}`, {
-          x: 70,
-          y,
-          size: 12,
-          font: customFont,
-          color: opt.is_correct ? rgb(0, 0.5, 0) : rgb(0.2, 0.2, 0.2),
-        });
-        y -= 20;
+    try {
+      const response = await fetch('/api/generate-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questions, date }),
       });
 
-      y -= 10;
-    });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "PDF yuklashda xatolik");
+      }
 
-    // PDF saqlash
-    const pdfBytes = await pdfDoc.save();
-    const blob = new Blob([pdfBytes], { type: "application/pdf" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `savollar-${date}.pdf`;
-    link.click();
+      const blob = await response.blob();
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `savollar-${date}.pdf`;
+      link.click();
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
-  // 🔹 Savolni o‘chirish
+  // Savolni o'chirish
   const handleDeleteQuestion = async (questionId, date) => {
     if (!window.confirm("Bu savolni o'chirishni xohlaysizmi?")) return;
 
@@ -144,18 +103,20 @@ const GroupedQuestions = ({ subjectId }) => {
   };
 
   return (
-    <div className="flex flex-col h-auto bg-gray-100">
+    <div className="flex flex-col min-h-screen bg-gray-100">
       {error && (
         <div className="text-center p-4 text-red-600 bg-red-100 rounded-lg shadow-md">
           Xatolik: {error}
         </div>
       )}
 
+      {loading && <p className="text-center p-4">Yuklanmoqda...</p>}
+
       <div className="flex-1 p-6">
-        {Object.keys(groupedQuestions || {}).length === 0 ? (
+        {Object.keys(groupedQuestions).length === 0 ? (
           <p>Savollar yo‘q</p>
         ) : (
-          Object.keys(groupedQuestions).sort().map((date) => (
+          Object.keys(groupedQuestions).sort().reverse().map((date) => (  // Eng yangisini yuqoriga
             <div key={date} className="mb-4 w-full">
               <button
                 onClick={() => setSelectedDate(selectedDate === date ? null : date)}
@@ -173,8 +134,14 @@ const GroupedQuestions = ({ subjectId }) => {
                   </button>
 
                   {groupedQuestions[date].map((question) => (
-                    <div key={question.id} className="mb-4 border-b pb-2 last:border-b-0">
-                      <p className="font-bold">{question.question_text}</p>
+                    <div key={question.id} className="mb-4 border-b pb-2 last:border-b-0 flex justify-between items-start">
+                      <p className="font-bold flex-1">{question.question_text}</p>
+                      <button
+                        onClick={() => handleDeleteQuestion(question.id, date)}
+                        className="ml-4 text-red-500 hover:text-red-700"
+                      >
+                        O'chirish
+                      </button>
                     </div>
                   ))}
                 </div>
