@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from "react";
+ import React, { useState, useEffect } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { BarChart } from "lucide-react";
 import axios from "axios";
+
+import { loadNotoSansFont } from '../../NotoSansFont';
 
 const UserResults = () => {
   const [results, setResults] = useState([]);
@@ -95,6 +97,9 @@ const handleDownloadPDF = async () => {
     ]);
 
     const doc = new jsPDF();
+    loadNotoSansFont(doc); // Custom fontni yuklash
+    doc.setFont('NotoSans-Regular', 'normal'); // Custom fontni o'rnatish
+
     doc.setFontSize(18);
     doc.text("Foydalanuvchilar natijalari", 14, 20);
 
@@ -126,8 +131,21 @@ const handleDownloadPDF = async () => {
           startY: startY + 12,
           theme: "grid",
           styles: {
-            fontSize: 8.5, // ⬅️ savollar shriftini kichikroq qildik
+            font: 'NotoSans-Regular', // Custom fontni o'rnatish
+            fontStyle: 'normal',
+            fontSize: 8.5, // savollar shriftini kichikroq qildik
             cellPadding: 2,
+            overflow: 'linebreak', // Qator bo'lishini faollashtirish
+            minCellHeight: 10, // Minimal balandlik
+            halign: 'left', // Chapga joylash
+            valign: 'middle', // O'rtaga joylash
+          },
+          columnStyles: {
+            0: { cellWidth: 20 }, // # ustuni
+            1: { cellWidth: 'auto' }, // Savol ustuni (avto)
+            2: { cellWidth: 60 }, // Foydalanuvchi javobi
+            3: { cellWidth: 60 }, // To'g'ri javob
+            4: { cellWidth: 30 }, // Holat
           },
           headStyles: {
             fillColor: [41, 128, 185],
