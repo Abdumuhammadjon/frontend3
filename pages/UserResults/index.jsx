@@ -141,11 +141,11 @@ const handleDownloadPDF = async () => {
             valign: 'middle', // O'rtaga joylash
           },
           columnStyles: {
-            0: { cellWidth: 20 }, // # ustuni
-            1: { cellWidth: 'auto' }, // Savol ustuni (avto)
-            2: { cellWidth: 60 }, // Foydalanuvchi javobi
-            3: { cellWidth: 60 }, // To'g'ri javob
-            4: { cellWidth: 30 }, // Holat
+            0: { cellWidth: 15 }, // # ustuni (kichikroq)
+            1: { cellWidth: 'auto' }, // Savol ustuni (avto, kattaroq bo'ladi)
+            2: { cellWidth: 40 }, // Foydalanuvchi javobi (kichikroq)
+            3: { cellWidth: 40 }, // To'g'ri javob (kichikroq)
+            4: { cellWidth: 20 }, // Holat (kichikroq)
           },
           headStyles: {
             fillColor: [41, 128, 185],
