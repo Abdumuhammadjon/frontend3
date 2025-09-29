@@ -85,13 +85,10 @@ const handleOptionChange = (qIndex, oIndex, value) => {
   if (!rawText) return '';
 
 return rawText
-    .replace(/[\u2000-\u200F]/g, '') // Boshqa invisible characters
-    .replace(/[\uFEFF]/g, '')       // Byte Order Mark (BOM)
-    .replace(/['"’‘“”]/g, '"')      // Har xil qo‘shtirnoq va tirnoqlarni oddiy qo‘shtirnoqqa aylantirish
-    // .replace(/\s+/g, ' ')        // Bu qatorni olib tashlang yoki izohga oling
+          
     .replace(/o[`'’"]/g, "o'")      
     .replace(/g[`'’"]/g, "g'")      
-    .trim();                        
+                            
 };
 
 
