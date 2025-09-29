@@ -85,8 +85,6 @@ const handleOptionChange = (qIndex, oIndex, value) => {
   if (!rawText) return '';
 
 return rawText
-    .replace(/\u00A0/g, ' ')        // Non-breaking space
-    .replace(/\u200B/g, '')         // Zero-width space
     .replace(/[\u2000-\u200F]/g, '') // Boshqa invisible characters
     .replace(/[\uFEFF]/g, '')       // Byte Order Mark (BOM)
     .replace(/['"’‘“”]/g, '"')      // Har xil qo‘shtirnoq va tirnoqlarni oddiy qo‘shtirnoqqa aylantirish
