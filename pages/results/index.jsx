@@ -1,4 +1,3 @@
- // components/GroupedQuestions.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/router';
@@ -61,13 +60,8 @@ const GroupedQuestions = ({ subjectId }) => {
         format: 'a4'
       });
 
-      // Debug: Mavjud fontlarni ko'rish
-      console.log('Mavjud fontlar:', doc.getFontList());
-
-      // NotoSans fontini yuklash
+      // Fontni yuklash
       loadNotoSansFont(doc);
-
-      // Custom fontni qo'llash
       doc.setFont('NotoSans-Regular', 'normal');
 
       const pageWidth = doc.internal.pageSize.getWidth();
@@ -109,9 +103,9 @@ const GroupedQuestions = ({ subjectId }) => {
             const optionText = `${String.fromCharCode(97 + idx)}) ${opt.option_text}${opt.is_correct ? " ✓" : ""}`;
             doc.setFontSize(12);
             if (opt.is_correct) {
-              doc.setTextColor(0, 0.5, 0);
+              doc.setTextColor(0, 128, 0);
             } else {
-              doc.setTextColor(0.2, 0.2, 0.2);
+              doc.setTextColor(50, 50, 50);
             }
             const optionLines = doc.splitTextToSize(optionText, maxWidth - 20);
             optionLines.forEach(line => {
@@ -172,7 +166,14 @@ const GroupedQuestions = ({ subjectId }) => {
         </div>
       )}
 
-      {loading && <p className="text-center p-4">Yuklanmoqda...</p>}
+      {/* === LOADER === */}
+      {loading && (
+        <div className="fixed inset-0 flex flex-col items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm z-50">
+          <div className="w-16 h-16 border-4 border-t-transparent border-blue-500 rounded-full animate-spin"></div>
+          <p className="text-white text-lg mt-4 font-semibold">Yuklanmoqda...</p>
+        </div>
+      )}
+      {/* === /LOADER === */}
 
       <div className="flex-1 p-6">
         {Object.keys(groupedQuestions).length === 0 ? (
