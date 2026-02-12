@@ -46,7 +46,7 @@ const Login = () => {
           withCredentials: true,
         }
       );
-      localStorage.setItem("subjectId", res.data.subjectId);
+      localStorage.setItem("subjectId", res.data.subject_id);
       localStorage.setItem("adminId", res.data.adminId);
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("userId", res.data.adminId);
