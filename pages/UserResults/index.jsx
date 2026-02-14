@@ -50,7 +50,7 @@ const UserResults = () => {
         // Agar `results` massiv bo‘lsa
         setResults(response.data.results || []);
       } catch (err) {
-        setError(err.response?.data?.error || "Natijalarni olishda xatolik");
+        setError(err.response?.data?.error || "Foydalanuvchi natijalari topilmadi");
       } finally {
         setLoading(false);
       }
