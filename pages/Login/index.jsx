@@ -50,7 +50,7 @@ const Login = () => {
       localStorage.setItem("subjectId", res.data.subject_id);
       localStorage.setItem("adminId", res.data.adminId);
       localStorage.setItem("token", res.data.token);
-      localStorage.setItem("userId", res.data.adminId);
+      localStorage.setItem("userId", res.data.userId);
       localStorage.setItem("role", res.data.role);
 
       const token = res.data.token;
