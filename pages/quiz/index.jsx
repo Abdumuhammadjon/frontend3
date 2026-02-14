@@ -109,62 +109,70 @@ export default function Home() {
   };
 
   const handleSaveAnswers = async () => {
-    const userId = localStorage.getItem("userId");
-    if (!userId) {
-      alert("Foydalanuvchi ID topilmadi. Iltimos, tizimga kiring!");
-      return;
-    }
+  const userId = localStorage.getItem("userId");
+  if (!userId) {
+    alert("Foydalanuvchi ID topilmadi. Iltimos, tizimga kiring!");
+    return;
+  }
 
-    if (!selectedSubject) {
-      alert("Fanni tanlang!");
-      return;
-    }
+  if (!selectedSubject) {
+    alert("Fanni tanlang!");
+    return;
+  }
 
-    // Barcha savollar
-    const allQuestions =
-      selectedDate && groupedQuestions[selectedDate]
-        ? groupedQuestions[selectedDate]
-        : [];
+  if (!selectedDate) {
+    alert("Iltimos, savollar sanasini tanlang!");
+    return;
+  }
 
-    // Tanlangan javoblar ro‘yxati
-    const answers = Object.values(selectedOptions).map(
-      ({ questionId, variantId }) => ({
-        questionId,
-        variantId,
-      })
-    );
+  const allQuestions = groupedQuestions[selectedDate] || [];
 
-    // Hech qanday savolga javob belgilanmagan bo‘lsa
-    if (answers.length === 0) {
-      alert("Iltimos, hech bo‘lmaganda bitta javob belgilang!");
-      return;
-    }
+  const answers = Object.values(selectedOptions).map(
+    ({ questionId, variantId }) => ({
+      questionId,
+      variantId,
+    })
+  );
 
-    // Agar ba'zi savollarga javob tanlanmagan bo‘lsa
-    if (answers.length < allQuestions.length) {
-      alert("Iltimos, barcha savollarga javob belgilang!");
-      return;
-    }
+  if (answers.length === 0) {
+    alert("Iltimos, hech bo‘lmaganda bitta javob belgilang!");
+    return;
+  }
 
-    try {
-      setLoading(true);
-      await axios.post("https://backed1.onrender.com/api/save-answers", {
-        answers,
-        userId,
-        subjectId: selectedSubject,
-      });
+  if (answers.length < allQuestions.length) {
+    alert("Iltimos, barcha savollarga javob belgilang!");
+    return;
+  }
 
-      alert("Javoblar muvaffaqiyatli saqlandi!");
-      router.push({
-        pathname: "/Natija",
-        query: { subjectId: selectedSubject },
-      });
-    } catch (error) {
+  try {
+    setLoading(true);
+    
+    // 🔥 testDate qo‘shildi
+    const testDate = selectedDate; 
+
+    await axios.post("https://backed1.onrender.com/api/save-answers", {
+      answers,
+      userId,
+      subjectId: selectedSubject,
+      testDate, // backend bilan moslash
+    });
+
+    alert("Javoblar muvaffaqiyatli saqlandi!");
+    router.push({
+      pathname: "/Natija",
+      query: { subjectId: selectedSubject },
+    });
+  } catch (error) {
+    // Backenddan kelgan xatolikni aniqroq ko‘rsatish
+    if (error.response?.data?.error) {
+      alert(error.response.data.error);
+    } else {
       alert("Javoblarni saqlashda xatolik yuz berdi");
-    } finally {
-      setLoading(false);
     }
-  };
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center p-6 relative">
