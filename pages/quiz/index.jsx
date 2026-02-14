@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import axios from "axios";
 
-const Question = ({ question, selectedOptions, handleOptionChange, disabled }) => {
+// Savol komponenti
+const Question = ({ question, selectedOptions, handleOptionChange }) => {
   return (
     <div className="p-4 border-b">
       <p className="font-bold text-lg text-gray-900">{question.question_text}</p>
@@ -18,12 +19,9 @@ const Question = ({ question, selectedOptions, handleOptionChange, disabled }) =
                 onChange={() =>
                   handleOptionChange(question.id, option.id, option.option_text)
                 }
-                disabled={disabled} // ← Agar foydalanuvchi allaqachon javob bergan bo‘lsa bloklash
                 className="mr-2"
               />
-              <span className={`p-3 rounded-lg border w-full text-base font-medium transition-all duration-200 ${
-                disabled ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-100 border-gray-300 text-gray-800 hover:bg-gray-200'
-              }`}>
+              <span className="p-3 rounded-lg bg-gray-100 border border-gray-300 w-full text-gray-800 text-base font-medium hover:bg-gray-200 transition-all duration-200">
                 {option.option_text}
               </span>
             </li>
@@ -36,6 +34,7 @@ const Question = ({ question, selectedOptions, handleOptionChange, disabled }) =
   );
 };
 
+// Sana formatlash
 const formatDate = (dateString) => {
   const date = new Date(dateString);
   return date.toLocaleDateString("en", {
@@ -45,12 +44,15 @@ const formatDate = (dateString) => {
   });
 };
 
+// Savollarni sanasi bo‘yicha guruhlash
 const groupQuestionsByDate = (questions) => {
   const grouped = {};
   questions.forEach((question) => {
     const date = new Date(question.created_at);
     const key = date.toISOString().slice(0, 10);
-    if (!grouped[key]) grouped[key] = [];
+    if (!grouped[key]) {
+      grouped[key] = [];
+    }
     grouped[key].push(question);
   });
   return grouped;
@@ -65,7 +67,6 @@ export default function Home() {
   const [selectedOptions, setSelectedOptions] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [alreadyAnswered, setAlreadyAnswered] = useState(false); // ← Foydalanuvchi javob berganligini saqlash
 
   useEffect(() => {
     const fetchSubjects = async () => {
@@ -87,36 +88,12 @@ export default function Home() {
     setError(null);
     setSelectedOptions({});
     setSelectedDate(null);
-    setAlreadyAnswered(false);
-
     try {
       const response = await axios.get(
         `https://backed1.onrender.com/api/subject/${subjectId}`
       );
       setSelectedSubject(subjectId);
       setGroupedQuestions(groupQuestionsByDate(response.data));
-
-      // 🔹 Tekshirish: foydalanuvchi allaqachon javob berganmi
-      const userId = localStorage.getItem("userId");
-      if (userId) {
-        const resCheck = await axios.get(
-          `https://backed1.onrender.com/api/user-result?userId=${userId}&subjectId=${subjectId}`
-        );
-        if (resCheck.data.answers && resCheck.data.answers.length > 0) {
-          setAlreadyAnswered(true);
-          // Oldingi javoblarni load qilish (ixtiyoriy)
-          const prevOptions = {};
-          resCheck.data.answers.forEach(a => {
-            prevOptions[a.question_id] = {
-              questionId: a.question_id,
-              variantId: a.user_answer_id || null, // agar ID saqlansa
-              variantText: a.user_answer
-            };
-          });
-          setSelectedOptions(prevOptions);
-        }
-      }
-
     } catch (error) {
       setError("Savollarni yuklashda xatolik yuz berdi");
     } finally {
@@ -125,7 +102,6 @@ export default function Home() {
   };
 
   const handleOptionChange = (questionId, variantId, variantText) => {
-    if (alreadyAnswered) return; // Agar javob berilgan bo‘lsa, bloklash
     setSelectedOptions((prev) => ({
       ...prev,
       [questionId]: { questionId, variantId, variantText },
@@ -133,26 +109,38 @@ export default function Home() {
   };
 
   const handleSaveAnswers = async () => {
-    if (alreadyAnswered) {
-      alert("Siz allaqachon javob bergansiz!");
+    const userId = localStorage.getItem("userId");
+    if (!userId) {
+      alert("Foydalanuvchi ID topilmadi. Iltimos, tizimga kiring!");
       return;
     }
 
-    const userId = localStorage.getItem("userId");
-    if (!userId) return alert("Foydalanuvchi ID topilmadi!");
+    if (!selectedSubject) {
+      alert("Fanni tanlang!");
+      return;
+    }
 
-    if (!selectedSubject) return alert("Fanni tanlang!");
-
+    // Barcha savollar
     const allQuestions =
       selectedDate && groupedQuestions[selectedDate]
         ? groupedQuestions[selectedDate]
         : [];
 
-    const answers = Object.values(selectedOptions).map(({ questionId, variantId }) => ({
-      questionId,
-      variantId,
-    }));
+    // Tanlangan javoblar ro‘yxati
+    const answers = Object.values(selectedOptions).map(
+      ({ questionId, variantId }) => ({
+        questionId,
+        variantId,
+      })
+    );
 
+    // Hech qanday savolga javob belgilanmagan bo‘lsa
+    if (answers.length === 0) {
+      alert("Iltimos, hech bo‘lmaganda bitta javob belgilang!");
+      return;
+    }
+
+    // Agar ba'zi savollarga javob tanlanmagan bo‘lsa
     if (answers.length < allQuestions.length) {
       alert("Iltimos, barcha savollarga javob belgilang!");
       return;
@@ -165,8 +153,8 @@ export default function Home() {
         userId,
         subjectId: selectedSubject,
       });
+
       alert("Javoblar muvaffaqiyatli saqlandi!");
-      setAlreadyAnswered(true); // Javob berildi, keyingi harakatlarni bloklash
       router.push({
         pathname: "/Natija",
         query: { subjectId: selectedSubject },
@@ -187,6 +175,7 @@ export default function Home() {
       )}
 
       <h1 className="text-3xl font-bold text-blue-700 mb-6">Fanlar ro‘yxati</h1>
+
       {error && <p className="text-red-500 mb-4">Xatolik: {error}</p>}
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 w-full max-w-4xl">
@@ -195,14 +184,34 @@ export default function Home() {
             key={subject.id}
             className="bg-blue-500 text-white px-6 py-3 rounded-lg shadow-md hover:bg-blue-600 transition"
             onClick={() => fetchQuestions(subject.id)}
-            disabled={alreadyAnswered} // agar javob berilgan bo‘lsa bloklash
           >
             {subject.name}
           </button>
         ))}
       </div>
 
-      {selectedSubject && selectedDate && groupedQuestions[selectedDate] && (
+      {selectedSubject && (
+        <div className="mt-6 w-full max-w-4xl bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-2xl font-semibold text-gray-800 mb-4">
+            Savollar sanasi bo‘yicha
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {Object.keys(groupedQuestions)
+              .sort()
+              .map((date) => (
+                <button
+                  key={date}
+                  onClick={() => setSelectedDate(date)}
+                  className="bg-gray-200 p-3 rounded-lg shadow-md hover:bg-gray-300 transition"
+                >
+                  {formatDate(date)}
+                </button>
+              ))}
+          </div>
+        </div>
+      )}
+
+      {selectedDate && groupedQuestions[selectedDate] && (
         <div className="mt-6 w-full max-w-4xl bg-white p-6 rounded-lg shadow-md">
           <h2 className="text-2xl font-semibold text-gray-800 mb-4">Savollar</h2>
           {groupedQuestions[selectedDate].map((question) => (
@@ -211,21 +220,15 @@ export default function Home() {
               question={question}
               selectedOptions={selectedOptions}
               handleOptionChange={handleOptionChange}
-              disabled={alreadyAnswered} // agar javob berilgan bo‘lsa, radio disabled
             />
           ))}
           <button
             onClick={handleSaveAnswers}
             className="mt-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-md hover:bg-green-600 transition"
-            disabled={loading || alreadyAnswered} // bloklash
+            disabled={loading}
           >
             Javoblarni Saqlash
           </button>
-          {alreadyAnswered && (
-            <p className="mt-2 text-red-500 font-medium">
-              Siz allaqachon bu testga javob bergansiz!
-            </p>
-          )}
         </div>
       )}
     </div>
