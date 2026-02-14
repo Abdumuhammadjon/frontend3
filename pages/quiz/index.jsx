@@ -49,7 +49,7 @@ const groupQuestionsByDate = (questions) => {
   const grouped = {};
   questions.forEach((question) => {
     const date = new Date(question.created_at);
-    const key = date.toISOString().slice(0, 10);
+    const key = date.toISOString().slice(0, 10); // YYYY-MM-DD
     if (!grouped[key]) {
       grouped[key] = [];
     }
@@ -68,11 +68,14 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Fanlarni olish
   useEffect(() => {
     const fetchSubjects = async () => {
       setLoading(true);
       try {
-        const response = await axios.get("https://backed1.onrender.com/api/subjects");
+        const response = await axios.get(
+          "https://backed1.onrender.com/api/subjects"
+        );
         setSubjects(response.data);
       } catch (error) {
         setError("Fanlarni yuklashda xatolik yuz berdi");
@@ -83,6 +86,7 @@ export default function Home() {
     fetchSubjects();
   }, []);
 
+  // Tanlangan fanga savollarni olish
   const fetchQuestions = async (subjectId) => {
     setLoading(true);
     setError(null);
@@ -101,6 +105,7 @@ export default function Home() {
     }
   };
 
+  // Javob tanlash
   const handleOptionChange = (questionId, variantId, variantText) => {
     setSelectedOptions((prev) => ({
       ...prev,
@@ -108,71 +113,71 @@ export default function Home() {
     }));
   };
 
+  // Javoblarni saqlash
   const handleSaveAnswers = async () => {
-  const userId = localStorage.getItem("userId");
-  if (!userId) {
-    alert("Foydalanuvchi ID topilmadi. Iltimos, tizimga kiring!");
-    return;
-  }
-
-  if (!selectedSubject) {
-    alert("Fanni tanlang!");
-    return;
-  }
-
-  if (!selectedDate) {
-    alert("Iltimos, savollar sanasini tanlang!");
-    return;
-  }
-
-  const allQuestions = groupedQuestions[selectedDate] || [];
-
-  const answers = Object.values(selectedOptions).map(
-    ({ questionId, variantId }) => ({
-      questionId,
-      variantId,
-    })
-  );
-
-  if (answers.length === 0) {
-    alert("Iltimos, hech bo‘lmaganda bitta javob belgilang!");
-    return;
-  }
-
-  if (answers.length < allQuestions.length) {
-    alert("Iltimos, barcha savollarga javob belgilang!");
-    return;
-  }
-
-  try {
-    setLoading(true);
-    
-    // 🔥 testDate qo‘shildi
-    const testDate = selectedDate; 
-
-    await axios.post("https://backed1.onrender.com/api/save-answers", {
-      answers,
-      userId,
-      subjectId: selectedSubject,
-      testDate, // backend bilan moslash
-    });
-
-    alert("Javoblar muvaffaqiyatli saqlandi!");
-    router.push({
-      pathname: "/Natija",
-      query: { subjectId: selectedSubject },
-    });
-  } catch (error) {
-    // Backenddan kelgan xatolikni aniqroq ko‘rsatish
-    if (error.response?.data?.error) {
-      alert(error.response.data.error);
-    } else {
-      alert("Javoblarni saqlashda xatolik yuz berdi");
+    const userId = localStorage.getItem("userId");
+    if (!userId) {
+      alert("Foydalanuvchi ID topilmadi. Iltimos, tizimga kiring!");
+      return;
     }
-  } finally {
-    setLoading(false);
-  }
-};
+
+    if (!selectedSubject) {
+      alert("Fanni tanlang!");
+      return;
+    }
+
+    if (!selectedDate) {
+      alert("Iltimos, savollar sanasini tanlang!");
+      return;
+    }
+
+    const allQuestions = groupedQuestions[selectedDate] || [];
+
+    const answers = Object.values(selectedOptions).map(
+      ({ questionId, variantId }) => ({
+        questionId,
+        variantId,
+      })
+    );
+
+    if (answers.length === 0) {
+      alert("Iltimos, hech bo‘lmaganda bitta javob belgilang!");
+      return;
+    }
+
+    if (answers.length < allQuestions.length) {
+      alert("Iltimos, barcha savollarga javob belgilang!");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // 🔥 testDate ISO formatda yuboriladi
+      const testDate = new Date(selectedDate).toISOString().slice(0, 10);
+
+      await axios.post("https://backed1.onrender.com/api/save-answers", {
+        answers,
+        userId,
+        subjectId: selectedSubject,
+        testDate,
+      });
+
+      alert("Javoblar muvaffaqiyatli saqlandi!");
+      router.push({
+        pathname: "/Natija",
+        query: { subjectId: selectedSubject },
+      });
+    } catch (error) {
+      if (error.response?.data?.error) {
+        alert(error.response.data.error);
+      } else {
+        alert("Javoblarni saqlashda xatolik yuz berdi");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center p-6 relative">
@@ -210,7 +215,11 @@ export default function Home() {
                 <button
                   key={date}
                   onClick={() => setSelectedDate(date)}
-                  className="bg-gray-200 p-3 rounded-lg shadow-md hover:bg-gray-300 transition"
+                  className={`p-3 rounded-lg shadow-md transition ${
+                    selectedDate === date
+                      ? "bg-green-400 text-white"
+                      : "bg-gray-200 hover:bg-gray-300"
+                  }`}
                 >
                   {formatDate(date)}
                 </button>
