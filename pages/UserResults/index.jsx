@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
-import { BarChart, Calendar, Clock } from "lucide-react";
+import { BarChart, Calendar, Clock, ArrowLeft, Download } from "lucide-react";
 import axios from "axios";
 import { loadNotoSansFont } from '../../NotoSansFont';
 
@@ -34,7 +34,7 @@ const UserResults = () => {
 
         setResults(response.data.results || []);
       } catch (err) {
-        setError("Natijalarni yuklashda xatolik");
+        setError("Natijalarni yuklashda xatolik yuz berdi");
       } finally {
         setLoading(false);
       }
@@ -42,90 +42,117 @@ const UserResults = () => {
     fetchResults();
   }, [router]);
 
-  // --- ASOSIY GURUHLASH MANTIQI ---
-  const groupResultsByDate = (data) => {
-    const groups = {};
-    
-    data.forEach((result) => {
-      // result.date dan faqat yil-oy-kun qismini olamiz (masalan: "2026-04-19")
-      const dateKey = result.date ? result.date.split('T')[0] : "Noma'lum sana";
-      
-      // Agar bu sana hali guruhda bo'lmasa, yangi massiv ochamiz
-      if (!groups[dateKey]) {
-        groups[dateKey] = [];
-      }
-      
-      // Shu sanaga tegishli natijani massivga qo'shamiz
-      groups[dateKey].push(result);
-    });
-    
+  // --- SANA BO'YICHA GURUHLASH (SODDA VA SAMARALI) ---
+  const groupedResults = results.reduce((groups, result) => {
+    const dateKey = result.date ? result.date.split('T')[0] : "Noma'lum sana";
+    if (!groups[dateKey]) groups[dateKey] = [];
+    groups[dateKey].push(result);
     return groups;
-  };
+  }, {});
 
-  const groupedResults = groupResultsByDate(results);
-
-  // Vaqtni formatlash (Soat:Daqiqa)
   const formatTime = (dateStr) => {
     if (!dateStr) return "--:--";
     return new Date(dateStr).toLocaleTimeString("uz-UZ", { hour: '2-digit', minute: '2-digit' });
   };
 
-  // Sanani formatlash (Kun.Oy.Yil)
   const formatDateLabel = (dateStr) => {
     if (!dateStr || dateStr === "Noma'lum sana") return dateStr;
     return new Date(dateStr).toLocaleDateString("uz-UZ");
   };
 
+  const handleDelete = async (resultId) => {
+    if (!confirm("Ushbu natijani o'chirmoqchimisiz?")) return;
+    const token = localStorage.getItem("token");
+    try {
+      await axios.delete(`https://backed1.onrender.com/api/userResult/${resultId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setResults((prev) => prev.filter((r) => r.resultId !== resultId));
+    } catch (err) {
+      alert("O‘chirishda xatolik: " + (err.response?.data?.error || "Xatolik"));
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    try {
+      if (!results.length) return alert("Natijalar yo'q");
+      const [{ jsPDF }, autoTable] = await Promise.all([import("jspdf"), import("jspdf-autotable")]);
+      const doc = new jsPDF();
+      loadNotoSansFont(doc);
+      doc.setFont('NotoSans-Regular', 'normal');
+      doc.text("Test Natijalari", 14, 15);
+      
+      // PDF generatsiya mantiqi shu yerda davom etadi...
+      doc.save("natijalar.pdf");
+    } catch (err) {
+      alert("PDF yuklashda xatolik");
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-100 p-4 sm:p-6 text-gray-800">
+    <div className="min-h-screen bg-gray-100 p-4 sm:p-6 text-gray-800 font-sans">
+      <Head>
+        <title>Natijalar Guruhi</title>
+      </Head>
+
       <div className="max-w-6xl mx-auto">
-        <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-          <BarChart size={24} className="text-blue-600" /> Foydalanuvchi Natijalari
-        </h2>
+        {/* HEADER */}
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+          <h2 className="text-2xl font-extrabold flex items-center gap-2 text-gray-900">
+            <BarChart className="text-blue-600" /> Foydalanuvchi Natijalari
+          </h2>
+          <div className="flex gap-2">
+            <button onClick={handleDownloadPDF} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-md">
+              <Download size={18} /> PDF
+            </button>
+            <button onClick={() => router.push("/questions")} className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition shadow-md">
+              <ArrowLeft size={18} /> Orqaga
+            </button>
+          </div>
+        </div>
 
-        {loading && <p className="text-center py-10">Yuklanmoqda...</p>}
+        {loading && <div className="text-center py-20 text-gray-500 animate-pulse">Yuklanmoqda...</div>}
+        {error && <div className="bg-red-50 text-red-600 p-4 rounded-lg border border-red-200">{error}</div>}
 
-        {!loading && Object.keys(groupedResults).length > 0 ? (
-          // Sanalar bo'yicha aylanamiz (eng yangi sana birinchi chiqadi)
+        {!loading && !error && Object.keys(groupedResults).length > 0 ? (
           Object.keys(groupedResults).sort((a, b) => b.localeCompare(a)).map((dateKey) => (
-            <div key={dateKey} className="mb-10 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div key={dateKey} className="mb-10 overflow-hidden">
               
-              {/* GURUH SARLAVHASI - Faqat bir marta chiqadi */}
-              <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Calendar size={20} className="text-blue-500" />
-                  <span className="text-lg font-bold text-gray-700">
-                    {formatDateLabel(dateKey)} kungi natijalar
-                  </span>
+              {/* SANA SARLAVHASI */}
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-blue-600 rounded-lg text-white">
+                  <Calendar size={20} />
                 </div>
-                <span className="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-medium">
-                  {groupedResults[dateKey].length} ta urinish
-                </span>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-800">{formatDateLabel(dateKey)}</h3>
+                  <p className="text-xs text-gray-500">{groupedResults[dateKey].length} ta natija mavjud</p>
+                </div>
               </div>
 
-              {/* JADVAL - Shu kungi barcha foydalanuvchilar bitta jadvalda */}
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-center divide-y divide-gray-200">
-                  <thead className="bg-white">
+              {/* JADVAL */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200 text-center">
+                  <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Vaqt</th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Foydalanuvchi</th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">To'g'ri/Jami</th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Foiz</th>
+                      <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Vaqt</th>
+                      <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-left">Foydalanuvchi</th>
+                      <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">To'g'ri/Jami</th>
+                      <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Foiz</th>
+                      <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Amal</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200">
+                  <tbody className="bg-white divide-y divide-gray-200">
                     {groupedResults[dateKey].map((res) => (
-                      <tr key={res.resultId} className="hover:bg-gray-50 transition">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <div className="flex items-center justify-center gap-1">
+                      <tr key={res.resultId} className="hover:bg-blue-50/50 transition duration-150">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="inline-flex items-center gap-1 text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded">
                             <Clock size={14} /> {formatTime(res.date)}
-                          </div>
+                          </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap font-semibold text-gray-900">
-                          {res.username}
+                        <td className="px-6 py-4 whitespace-nowrap text-left">
+                          <div className="text-sm font-bold text-gray-900">{res.username}</div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
                           {res.correctAnswers} / {res.totalQuestions}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -135,6 +162,11 @@ const UserResults = () => {
                             {res.scorePercentage}%
                           </span>
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <button onClick={() => handleDelete(res.resultId)} className="text-red-500 hover:text-red-700 font-semibold underline-offset-4 hover:underline">
+                            O'chirish
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -143,7 +175,7 @@ const UserResults = () => {
             </div>
           ))
         ) : (
-          !loading && <p className="text-center text-gray-500 py-10">Natijalar topilmadi.</p>
+          !loading && <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300 text-gray-400">Natijalar mavjud emas.</div>
         )}
       </div>
     </div>
