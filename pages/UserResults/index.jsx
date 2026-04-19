@@ -175,7 +175,7 @@ const UserResults = () => {
         {/* --- GURUHLANGAN NATIJALAR --- */}
         {!loading && !error && Object.keys(groupedResults).length > 0 && (
           Object.keys(groupedResults).sort((a, b) => b.localeCompare(a)).map((date) => (
-            <div key={dateKey} className="mb-10">
+            <div key={date} className="mb-10">
               {/* Sana sarlavhasi */}
               <div className="flex items-center gap-2 mb-4 bg-white p-3 rounded-lg shadow-sm w-fit border-l-4 border-blue-600">
                 <Calendar size={20} className="text-blue-600" />
