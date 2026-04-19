@@ -3,7 +3,6 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import { BarChart, Calendar, Clock } from "lucide-react";
 import axios from "axios";
-
 import { loadNotoSansFont } from '../../NotoSansFont';
 
 const UserResults = () => {
@@ -23,52 +22,52 @@ const UserResults = () => {
     }
 
     const fetchResults = async () => {
-      if (!userId) {
-        setError("Foydalanuvchi ID topilmadi");
-        setLoading(false);
-        return;
-      }
-
       try {
         setLoading(true);
-        setError(null);
         const url = subjectId
           ? `https://backed1.onrender.com/api/userResults/${userId}?subjectId=${subjectId}`
           : `https://backed1.onrender.com/api/userResults/${userId}`;
 
         const response = await axios.get(url, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         setResults(response.data.results || []);
       } catch (err) {
-        setError(err.response?.data?.error || "Foydalanuvchi natijalari topilmadi");
+        setError("Natijalarni yuklashda xatolik");
       } finally {
         setLoading(false);
       }
     };
-
     fetchResults();
   }, [router]);
-  console.log(results)
 
-  // --- NATIJALARNI SANA BO'YICHA GURUHLASH (FAQAT KUN FARQ QILSA ALOHIDA GURUH) ---
+  // --- SANA BO'YICHA GURUHLASH (BACKEND FORMATIGA MOSLANGAN) ---
   const groupResultsByDate = (data) => {
-    return data.reduce((groups, result) => {
-      // Backenddan kelgan 'date' dan faqat kun qismini olamiz (YYYY-MM-DD)
-      const dateKey = result.date ? result.date.split('T')[0] : "Noma'lum sana";
+    const groups = {};
+    data.forEach((result) => {
+      // Backend: "19/04/2026, 15:18:48" -> split qilib "19/04/2026" ni olamiz
+      const dateKey = result.date ? result.date.split(',')[0].trim() : "Noma'lum sana";
+      
       if (!groups[dateKey]) {
         groups[dateKey] = [];
       }
       groups[dateKey].push(result);
-      return groups;
-    }, {});
+    });
+    return groups;
   };
 
   const groupedResults = groupResultsByDate(results);
+
+  // --- VAQTNI FORMATLASH (BACKEND FORMATIGA MOSLANGAN) ---
+  const formatTime = (dateStr) => {
+    if (!dateStr) return "--:--";
+    // "19/04/2026, 15:18:48" -> "15:18:48" qismini olib, sekundni olib tashlaymiz
+    const timePart = dateStr.split(',')[1]?.trim(); 
+    if (!timePart) return "--:--";
+    const [hour, minute] = timePart.split(':');
+    return `${hour}:${minute}`;
+  };
 
   const handleBack = () => {
     router.push("/questions");
@@ -77,14 +76,9 @@ const UserResults = () => {
   const handleDelete = async (resultId) => {
     const token = localStorage.getItem("token");
     try {
-      await axios.delete(
-        `https://backed1.onrender.com/api/userResult/${resultId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      await axios.delete(`https://backed1.onrender.com/api/userResult/${resultId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setResults((prev) => prev.filter((r) => r.resultId !== resultId));
     } catch (err) {
       alert("O‘chirishda xatolik: " + (err.response?.data?.error || "Xatolik"));
@@ -113,7 +107,7 @@ const UserResults = () => {
         doc.setFontSize(14);
         doc.text(`${index + 1}. ${res.username}`, 14, startY);
         doc.setFontSize(11);
-        doc.text(`To'g'ri javoblar: ${res.correctAnswers}/${res.totalQuestions} | Foiz: ${res.scorePercentage}%`, 14, startY + 6);
+        doc.text(`Sana: ${res.date} | To'g'ri: ${res.correctAnswers}/${res.totalQuestions}`, 14, startY + 6);
         if (res.answers && res.answers.length > 0) {
           const tableData = res.answers.map((a, i) => [i + 1, a.question_text, a.user_answer || "-", a.correct_answer, a.is_correct ? "✅" : "❓"]);
           autoTable.default(doc, {
@@ -127,12 +121,12 @@ const UserResults = () => {
       });
       doc.save("natijalar.pdf");
     } catch (err) {
-      alert("PDF yaratishda xatolik: " + (err?.message || "Noma'lum xatolik"));
+      alert("PDF yaratishda xatolik");
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4 sm:p-6">
+    <div className="min-h-screen bg-gray-100 p-4 sm:p-6 text-gray-800">
       <Head>
         <title>Foydalanuvchi Natijalari</title>
       </Head>
@@ -140,8 +134,7 @@ const UserResults = () => {
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
           <h2 className="text-2xl font-semibold text-gray-800 flex items-center gap-2">
-            <BarChart size={24} />
-            Foydalanuvchi Natijalari
+            <BarChart size={24} className="text-blue-600" /> Foydalanuvchi Natijalari
           </h2>
           <div className="flex gap-4">
             <button onClick={handleDownloadPDF} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200">
@@ -153,61 +146,74 @@ const UserResults = () => {
           </div>
         </div>
 
-        {loading && <p className="text-gray-600">Natijalar yuklanmoqda...</p>}
-        {error && <p className="text-red-500 bg-red-100 p-3 rounded-lg">{error}</p>}
+        {loading && <p className="text-center py-10">Yuklanmoqda...</p>}
+        {error && <p className="text-red-500 bg-red-100 p-3 rounded-lg text-center">{error}</p>}
 
         {!loading && !error && results.length === 0 && (
-          <p className="text-gray-600">Hech qanday natija topilmadi.</p>
+          <p className="text-center py-10 text-gray-500">Hech qanday natija topilmadi.</p>
         )}
 
-        {/* --- GURUHLANGAN NATIJALARNI CHIQARISH --- */}
+        {/* --- GURUHLANGAN NATIJALAR --- */}
         {!loading && !error && Object.keys(groupedResults).length > 0 && (
-          Object.keys(groupedResults).sort((a, b) => b.localeCompare(a)).map((date) => (
-            <div key={date} className="mb-10 bg-white shadow-md rounded-lg overflow-hidden border border-gray-200">
+          Object.keys(groupedResults).sort((a, b) => {
+            // Sanalarni teskari tartibda saralash (eng yangi kun tepada)
+            const dateA = a.split('/').reverse().join('-');
+            const dateB = b.split('/').reverse().join('-');
+            return dateB.localeCompare(dateA);
+          }).map((dateKey) => (
+            <div key={dateKey} className="mb-10 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               
-              {/* SANA SARLAVHASI - Faqat bir kunda bir marta chiqadi */}
-              <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center gap-2">
-                <Calendar size={20} className="text-blue-500" />
-                <h3 className="text-lg font-bold text-gray-700">
-                  {new Date(date).toLocaleDateString("uz-UZ")} kungi natijalar
-                </h3>
+              {/* SANA SARLAVHASI - Sanasi bir xillar uchun faqat bir marta chiqadi */}
+              <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Calendar size={20} className="text-blue-500" />
+                  <span className="text-lg font-bold text-gray-700">{dateKey} kungi natijalar</span>
+                </div>
+                <span className="text-xs font-medium bg-blue-100 text-blue-700 px-2.5 py-0.5 rounded-full">
+                  {groupedResults[dateKey].length} ta urinish
+                </span>
               </div>
 
-              {/* JADVAL - Shu kungi barcha foydalanuvchilar bitta jadval ichida */}
+              {/* JADVAL - Shu kungi hamma foydalanuvchilar bitta joyda */}
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 text-sm text-center">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full text-center divide-y divide-gray-200">
+                  <thead className="bg-white">
                     <tr>
-                      <th className="px-4 py-3 text-gray-500 uppercase font-medium">Vaqt</th>
-                      <th className="px-4 py-3 text-gray-500 uppercase font-medium">Foydalanuvchi</th>
-                      <th className="px-4 py-3 text-gray-500 uppercase font-medium">To‘g‘ri javoblar</th>
-                      <th className="px-4 py-3 text-gray-500 uppercase font-medium">Foiz</th>
-                      <th className="px-4 py-3 text-gray-500 uppercase font-medium">Amallar</th>
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Vaqt</th>
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Foydalanuvchi</th>
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">To'g'ri/Jami</th>
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Foiz</th>
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Amallar</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {groupedResults[date].map((result) => (
-                      <tr key={result.resultId} className="hover:bg-gray-50 transition">
-                        {/* Foydalanuvchi aynan qaysi vaqtda topshirgani */}
-                        <td className="px-4 py-3 text-gray-500">
+                  <tbody className="divide-y divide-gray-200 bg-white">
+                    {groupedResults[dateKey].map((res) => (
+                      <tr key={res.resultId} className="hover:bg-gray-50 transition">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           <div className="flex items-center justify-center gap-1">
-                            <Clock size={14} />
-                            {new Date(result.date).toLocaleTimeString("uz-UZ", { hour: '2-digit', minute: '2-digit' })}
+                            <Clock size={14} className="text-gray-400" />
+                            {formatTime(res.date)}
                           </div>
                         </td>
-                        <td className="px-4 py-3 font-medium text-gray-900">{result.username}</td>
-                        <td className="px-4 py-3 text-gray-600">{result.correctAnswers} / {result.totalQuestions}</td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2 py-1 rounded-full text-xs ${result.scorePercentage > 70 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                            {result.scorePercentage}%
+                        <td className="px-6 py-4 whitespace-nowrap font-bold text-gray-900">
+                          {res.username}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          {res.correctAnswers} / {res.totalQuestions}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                            res.scorePercentage >= 70 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                          }`}>
+                            {res.scorePercentage}%
                           </span>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <button
-                            onClick={() => handleDelete(result.resultId)}
-                            className="text-red-600 hover:text-red-800 font-medium"
+                            onClick={() => handleDelete(res.resultId)}
+                            className="text-red-500 hover:text-red-700 font-semibold"
                           >
-                            O‘chirish
+                            O'chirish
                           </button>
                         </td>
                       </tr>
