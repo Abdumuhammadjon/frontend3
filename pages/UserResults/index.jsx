@@ -59,7 +59,7 @@ const UserResults = () => {
   const groupResultsByDate = (data) => {
     return data.reduce((groups, result) => {
       // Backenddan kelgan vaqtni (createdAt) faqat sana qismini olamiz (YYYY-MM-DD)
-      const date = result.createdAt ? result.createdAt.split('T')[0] : "Noma'lum sana";
+      const date = result.date ? result.date.split('T')[0] : "Noma'lum sana";
       if (!groups[date]) {
         groups[date] = [];
       }
