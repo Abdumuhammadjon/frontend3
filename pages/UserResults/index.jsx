@@ -174,12 +174,12 @@ const UserResults = () => {
 
         {/* --- GURUHLANGAN NATIJALAR --- */}
         {!loading && !error && Object.keys(groupedResults).length > 0 && (
-          Object.keys(groupedResults).sort((a, b) => b.localeCompare(a)).map((dateKey) => (
+          Object.keys(groupedResults).sort((a, b) => b.localeCompare(a)).map((date) => (
             <div key={dateKey} className="mb-10">
               {/* Sana sarlavhasi */}
               <div className="flex items-center gap-2 mb-4 bg-white p-3 rounded-lg shadow-sm w-fit border-l-4 border-blue-600">
                 <Calendar size={20} className="text-blue-600" />
-                <h3 className="text-lg font-bold text-gray-700">{formatDateLabel(dateKey)} kungi natijalar</h3>
+                <h3 className="text-lg font-bold text-gray-700">{formatDateLabel(date)} kungi natijalar</h3>
               </div>
 
               <div className="bg-white shadow-md rounded-lg overflow-x-auto border border-gray-200">
