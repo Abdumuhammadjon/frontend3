@@ -41,6 +41,7 @@ const UserResults = () => {
     };
     fetchResults();
   }, [router]);
+  console.log(results)
 
   // --- SANA BO'YICHA GURUHLASH (SODDA VA SAMARALI) ---
   const groupedResults = results.reduce((groups, result) => {
