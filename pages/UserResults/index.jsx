@@ -53,6 +53,7 @@ const UserResults = () => {
 
     fetchResults();
   }, [router]);
+  console.log(results)
 
   // --- NATIJALARNI SANA BO'YICHA GURUHLASH FUNKSIYASI ---
   const groupResultsByDate = (data) => {
