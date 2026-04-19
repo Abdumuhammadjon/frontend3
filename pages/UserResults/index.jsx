@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
-import { BarChart, Calendar } from "lucide-react";
+import { BarChart, Calendar, Clock } from "lucide-react"; // Clock ikonkasi qo'shildi
 import axios from "axios";
 
 import { loadNotoSansFont } from '../../NotoSansFont';
@@ -53,17 +53,29 @@ const UserResults = () => {
 
     fetchResults();
   }, [router]);
-  console.log(results)
 
-  // --- NATIJALARNI SANA BO'YICHA GURUHLASH FUNKSIYASI ---
+  // --- VAQTNI VA SANANI FORMATLASH ---
+  const formatTime = (dateStr) => {
+    if (!dateStr) return "--:--";
+    const date = new Date(dateStr);
+    return date.toLocaleTimeString("uz-UZ", { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const formatDateLabel = (dateStr) => {
+    if (!dateStr || dateStr === "Noma'lum sana") return dateStr;
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("uz-UZ"); // 19.04.2026 ko'rinishida
+  };
+
+  // --- NATIJALARNI SANA BO'YICHA GURUHLASH ---
   const groupResultsByDate = (data) => {
     return data.reduce((groups, result) => {
-      // Backenddan kelgan vaqtni (createdAt) faqat sana qismini olamiz (YYYY-MM-DD)
-      const date = result.date ? result.date.split('T')[0] : "Noma'lum sana";
-      if (!groups[date]) {
-        groups[date] = [];
+      // Backenddan kelgan 'date' yoki 'createdAt' dan foydalanamiz
+      const dateKey = result.date ? result.date.split('T')[0] : "Noma'lum sana";
+      if (!groups[dateKey]) {
+        groups[dateKey] = [];
       }
-      groups[date].push(result);
+      groups[dateKey].push(result);
       return groups;
     }, {});
   };
@@ -92,7 +104,6 @@ const UserResults = () => {
   };
 
   const handleDownloadPDF = async () => {
-    // PDF funksiyasi o'zgarishsiz qoldi...
     try {
       if (!results || results.length === 0) {
         alert("PDF uchun natijalar topilmadi.");
@@ -112,9 +123,9 @@ const UserResults = () => {
         let startY = 30;
         if (index > 0) doc.addPage();
         doc.setFontSize(14);
-        doc.text(`${index + 1}. ${res.username}`, 14, startY);
+        doc.text(`${index + 1}. ${res.username} (${formatTime(res.date)})`, 14, startY);
         doc.setFontSize(11);
-        doc.text(`To'g'ri javoblar: ${res.correctAnswers}/${res.totalQuestions} | Foiz: ${res.scorePercentage}%`, 14, startY + 6);
+        doc.text(`Sana: ${formatDateLabel(res.date)} | To'g'ri: ${res.correctAnswers}/${res.totalQuestions}`, 14, startY + 6);
         if (res.answers && res.answers.length > 0) {
           const tableData = res.answers.map((a, i) => [i + 1, a.question_text, a.user_answer || "-", a.correct_answer, a.is_correct ? "✅" : "❓"]);
           autoTable.default(doc, {
@@ -154,46 +165,57 @@ const UserResults = () => {
           </div>
         </div>
 
-        {loading && <p className="text-gray-600">Natijalar yuklanmoqda...</p>}
-        {error && <p className="text-red-500 bg-red-100 p-3 rounded-lg">{error}</p>}
+        {loading && <p className="text-gray-600 text-center py-10">Natijalar yuklanmoqda...</p>}
+        {error && <p className="text-red-500 bg-red-100 p-3 rounded-lg text-center">{error}</p>}
 
         {!loading && !error && results.length === 0 && (
-          <p className="text-gray-600">Hech qanday natija topilmadi.</p>
+          <p className="text-gray-600 text-center py-10">Hech qanday natija topilmadi.</p>
         )}
 
-        {/* --- GURUHLANGAN NATIJALARNI CHIQARISH --- */}
+        {/* --- GURUHLANGAN NATIJALAR --- */}
         {!loading && !error && Object.keys(groupedResults).length > 0 && (
-          Object.keys(groupedResults).sort((a, b) => b.localeCompare(a)).map((date) => (
-            <div key={date} className="mb-10">
-              <div className="flex items-center gap-2 mb-4 bg-white p-3 rounded-lg shadow-sm w-fit border-l-4 border-blue-500">
-                <Calendar size={20} className="text-blue-500" />
-                <h3 className="text-lg font-bold text-gray-700">{date} kungi natijalar</h3>
+          Object.keys(groupedResults).sort((a, b) => b.localeCompare(a)).map((dateKey) => (
+            <div key={dateKey} className="mb-10">
+              {/* Sana sarlavhasi */}
+              <div className="flex items-center gap-2 mb-4 bg-white p-3 rounded-lg shadow-sm w-fit border-l-4 border-blue-600">
+                <Calendar size={20} className="text-blue-600" />
+                <h3 className="text-lg font-bold text-gray-700">{formatDateLabel(dateKey)} kungi natijalar</h3>
               </div>
 
-              <div className="bg-white shadow-md rounded-lg overflow-x-auto">
+              <div className="bg-white shadow-md rounded-lg overflow-x-auto border border-gray-200">
                 <table className="min-w-full divide-y divide-gray-200 text-sm text-center">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-4 py-3 text-gray-500 uppercase font-medium">Foydalanuvchi</th>
-                      <th className="px-4 py-3 text-gray-500 uppercase font-medium">To‘g‘ri javoblar</th>
-                      <th className="px-4 py-3 text-gray-500 uppercase font-medium">Foiz</th>
-                      <th className="px-4 py-3 text-gray-500 uppercase font-medium">Amallar</th>
+                      <th className="px-4 py-3 text-gray-500 uppercase font-semibold">Vaqt</th>
+                      <th className="px-4 py-3 text-gray-500 uppercase font-semibold">Foydalanuvchi</th>
+                      <th className="px-4 py-3 text-gray-500 uppercase font-semibold">Natija</th>
+                      <th className="px-4 py-3 text-gray-500 uppercase font-semibold">Foiz</th>
+                      <th className="px-4 py-3 text-gray-500 uppercase font-semibold">Amallar</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {groupedResults[date].map((result) => (
-                      <tr key={result.resultId} className="hover:bg-gray-50 transition">
-                        <td className="px-4 py-3 font-medium text-gray-900">{result.username}</td>
-                        <td className="px-4 py-3 text-gray-600">{result.correctAnswers}</td>
+                    {groupedResults[dateKey].map((result) => (
+                      <tr key={result.resultId} className="hover:bg-blue-50/30 transition">
+                        {/* Aniq javob bergan vaqti */}
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span className="flex items-center justify-center gap-1 text-gray-500 font-medium">
+                            <Clock size={14} />
+                            {formatTime(result.date)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 font-semibold text-gray-900">{result.username}</td>
+                        <td className="px-4 py-3 text-gray-600">
+                          {result.correctAnswers} / {result.totalQuestions}
+                        </td>
                         <td className="px-4 py-3">
-                          <span className={`px-2 py-1 rounded-full text-xs ${result.scorePercentage > 70 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${result.scorePercentage > 70 ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
                             {result.scorePercentage}%
                           </span>
                         </td>
                         <td className="px-4 py-3">
                           <button
                             onClick={() => handleDelete(result.resultId)}
-                            className="text-red-600 hover:text-red-800 font-medium"
+                            className="text-red-500 hover:text-red-700 font-medium hover:underline"
                           >
                             O‘chirish
                           </button>
